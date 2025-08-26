@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyberia Admin</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+  <?!= include('css'); ?>
+</head>
+
+<body>
+
+  <!-- =================================================================
+    PÁGINA DE LOGIN
+    ================================================================== -->
+  <div id="loginPage" class="login-container">
+    <div class="login-box">
+      <img src="https://i.postimg.cc/7LRGw3XG/Dise-o-sin-t-tulo-4.png" alt="Logo Cyberia" class="login-logo">
+      <h4 class="text-center mb-4">Cyberia Admin</h4>
+      <form id="loginForm">
+        <div class="input-group mb-3">
+          <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
+          <input type="email" id="username" class="form-control" placeholder="Email" required>
+        </div>
+        <div class="input-group mb-4">
+          <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+          <input type="password" id="password" class="form-control" placeholder="Contraseña" required>
+        </div>
+        <div class="text-end mb-3">
+          <a href="#" id="forgotPasswordLink" class="text-primary">Olvidé mi contraseña</a>
+        </div>
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary btn-lg">Ingresar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =================================================================
+    ESTRUCTURA PRINCIPAL DE LA APLICACIÓN
+    ================================================================== -->
+  <div id="mainApp" class="d-flex" style="display: none !important;">
+
+    <nav id="sidebar" class="bg-dark">
+      <div class="sidebar-header">
+        <img src="https://i.postimg.cc/7LRGw3XG/Dise-o-sin-t-tulo-4.png" alt="Logo" style="width: 40px;">
+        <h3>Cyberia</h3>
+      </div>
+      <ul class="list-unstyled components">
+        <li><a href="#" class="nav-link active"
+            data-target-panel="panelDashboard"><i class="bi bi-grid-1x2-fill me-2"></i>Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-target-panel="panelVentas"><i class="bi bi-cart-check-fill me-2"></i>Punto
+            de Venta</a></li>
+        <li><a href="#" class="nav-link"
+            data-target-panel="panelInventario"><i class="bi bi-box-seam-fill me-2"></i>Inventario</a></li>
+        <li><a href="#" class="nav-link"
+            data-target-panel="panelPagos"><i class="bi bi-paypal me-2"></i>Pagos</a></li>
+        <li><a href="#" class="nav-link"
+            data-target-panel="panelDeudas"><i class="bi bi-piggy-bank-fill me-2"></i>Deudas</a></li>
+        <li><a href="#" class="nav-link"
+            data-target-panel="panelGastos"><i class="bi bi-clipboard-data-fill me-2"></i>Gastos</a></li>
+        <li><a href="#" class="nav-link"
+            data-target-panel="panelReportes"><i class="bi bi-bar-chart-line-fill me-2"></i>Reportes</a></li>
+        <li>
+          <a href="#adminSubmenu" data-bs-toggle="collapse" aria-expanded="false"
+            class="dropdown-toggle nav-link"><i class="bi bi-shield-lock-fill me-2"></i>Administración</a>
+          <ul class="collapse list-unstyled" id="adminSubmenu">
+            <li><a href="#" class="nav-link"
+                data-target-panel="panelAdminEmpleados"><i class="bi bi-people-fill me-2"></i>Empleados</a></li>
+            <li><a href="#" class="nav-link"
+                data-target-panel="panelAdminPermisos"><i class="bi bi-key-fill me-2"></i>Permisos</a></li>
+          </ul>
+        </li>
+      </ul>
+    </nav>
+
+    <div id="main-content">
+      <header id="top-header" class="p-3 d-flex justify-content-between align-items-center bg-light">
+        <button id="sidebarCollapse" class="btn btn-dark d-md-none"><i class="bi bi-list"></i></button>
+        <div class="ms-auto d-flex align-items-center"></div>
+        <div class="text-end me-3">
+          <h6 id="user-name" class="mb-0"></h6>
+          <small id="user-email" class="text-muted"></small>
+        </div>
+        <button id="btnToggleTheme" class="btn btn-outline-secondary me-2" title="Cambiar Tema"><i class="bi bi-moon-stars-fill"></i></button>
+        <button id="btnCerrarCaja" class="btn btn-warning me-2" style="display: none;"><i class="bi bi-door-closed-fill me-2"></i>Cerrar Caja</button>
+        <a id="logoutLink" href="#" class="btn btn-outline-danger"><i class="bi bi-box-arrow-right"></i></a>
+      </header>
+
+      <main id="content-panels" class="p-4">
+
+        <div class="content-panel" id="panelDashboard">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>Dashboard Gerencial</h3>
+            <div class="d-flex align-items-center">
+              <input type="date" id="dashboardFechaInicio" class="form-control me-2">
+              <input type="date" id="dashboardFechaFin" class="form-control me-2">
+              <button id="btnAplicarFiltroDashboard" class="btn btn-primary">Filtrar</button>
+            </div>
+          </div>
+
+          <div class="card mb-4">
+            <div class="card-body">
+              <canvas id="graficoRendimiento" style="max-height: 300px;"></canvas>
+            </div>
+          </div>
+
+          <div id="contenidoDashboard" class="card">
+            <div class="card-body">
+              <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Cargando datos...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================
+                PANEL PUNTO DE VENTA (REDiseñado)
+                ================================================================== -->
+        <div class="content-panel" id="panelVentas" style="display: none;">
+          <div class="row">
+            <!-- Columna Izquierda: Galería de Productos -->
+            <div class="col-lg-7">
+              <div class="card p-3 h-100">
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <label for="codigoBarras" class="form-label">Escanear Producto</label>
+                    <input type="text" class="form-control" id="codigoBarras" placeholder="Escanea o escribe y presiona Enter" autocomplete="off">
+                  </div>
+                  <div class="col-md-4">
+                    <label for="selectPc" class="form-label">Punto de Venta (PC)</label>
+                    <select id="selectPc" class="form-select">
+                                            <option value="">Seleccionar PC...</option>
+                                            <option value="PC1">PC1</option><option value="PC2">PC2</option><option value="PC3">PC3</option>
+                                            <!-- Más PCs se pueden añadir aquí -->
+                                        </select>
+                  </div>
+                </div>
+                <hr>
+                <h6>Acceso Rápido de Productos</h6>
+                <div class="btn-group mb-2 flex-wrap" role="group" id="botonesCategorias">
+                  <!-- Botones de categoría se generan aquí -->
+                </div>
+                <div class="row" id="contenedorProductos" style="max-height: 60vh; overflow-y: auto;">
+                  <!-- La galería de productos se genera aquí -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna Derecha: Resumen de Venta -->
+            <div class="col-lg-5">
+              <div class="card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="mb-0">Orden de Venta Actual</h5>
+                  <button class="btn btn-outline-secondary" id="btnHistorialVentas"><i class="bi bi-clock-history"></i> Ver Historial</button>
+                </div>
+                <div class="mb-3">
+                  <label for="selectCliente" class="form-label">Asignar a Cliente</label>
+                  <div class="input-group">
+                    <select id="selectCliente" class="form-select cliente-select">
+                                            <option value="varios">Cliente Varios</option>
+                                        </select>
+                    <button class="btn btn-outline-secondary" type="button" id="btnNuevoCliente" title="Registrar nuevo cliente"><i class="bi bi-person-plus-fill"></i></button>
+                  </div>
+                </div>
+                <div class="table-responsive flex-grow-1">
+                  <table class="table" id="tablaVenta">
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Subtotal</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="ventaItemsBody"></tbody>
+                  </table>
+                </div>
+                <div class="mt-auto">
+                  <div class="d-flex justify-content-between fs-4 fw-bold border-top pt-2">
+                    <span>TOTAL:</span>
+                    <span id="totalVenta">S/ 0.00</span>
+                  </div>
+                  <div class="d-grid mt-3">
+                    <button class="btn btn-primary btn-lg" id="btnFinalizarVenta"><i class="bi bi-check-circle"></i> Registrar Orden</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- =================================================================
+                NUEVO PANEL: HISTORIAL DE VENTAS (con pestañas)
+                ================================================================== -->
+        <div class="content-panel" id="panelHistorial" style="display: none;">
+          <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Historial y Verificación</h5>
+              <button class="btn btn-sm btn-outline-secondary" id="btnVolverAPDV" title="Volver al Punto de Venta"><i class="bi bi-arrow-left"></i> Volver a Venta</button>
+            </div>
+
+            <ul class="nav nav-tabs mb-3">
+              <li class="nav-item">
+                <a class="nav-link active" id="tabHistorialOrdenes" data-bs-toggle="tab"
+                  href="#contenidoHistorialOrdenes">1. Historial de Órdenes</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="tabVerificacionTurno" data-bs-toggle="tab" href="#contenidoVerificacionTurno">2.
+                  Verificación de Turno</a>
+              </li>
+            </ul>
+
+            <div class="tab-content">
+              <!-- Pestaña 1: Historial de Órdenes -->
+              <div class="tab-pane fade show active" id="contenidoHistorialOrdenes">
+                <div class="row g-3 mb-3 align-items-end">
+                  <div class="col-md-5">
+                    <label class="form-label">Filtrar por Fecha</label>
+                    <div class="input-group">
+                      <input type="date" id="filtroFechaInicio" class="form-control">
+                      <span class="input-group-text">a</span>
+                      <input type="date" id="filtroFechaFin" class="form-control">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <!-- Filtro por producto se aplicará con el buscador de DataTables -->
+                  </div>
+                  <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                      <button id="btnAplicarFiltros" class="btn btn-primary w-100"><i class="bi bi-search"></i> Filtrar</button>
+                      <button id="btnRefrescarHistorial" class="btn btn-outline-secondary" title="Actualizar Datos"><i class="bi bi-arrow-clockwise"></i></button>
+                    </div>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover" id="tablaHistorial">
+                    <thead>
+                      <tr>
+                        <th>ID Venta</th>
+                        <th>Fecha y Hora</th>
+                        <th>Usuario</th>
+                        <th>Cliente</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody id="historialBody"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Pestaña 2: Verificación de Turno -->
+              <div class="tab-pane fade" id="contenidoVerificacionTurno">
+                <div class="row g-3 align-items-end mb-3">
+                  <div class="col-md-8">
+                    <label for="selectSesionVerificacion" class="form-label">Seleccionar Sesión de Caja</label>
+                    <select id="selectSesionVerificacion" class="form-select"></select>
+                  </div>
+                  <div class="col-md-4">
+                    <button id="btnVerificarSesion" class="btn btn-info w-100">Verificar Productos Vendidos</button>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-sm" id="tablaVerificacion">
+                    <thead>
+                      <tr>
+                        <th>SKU</th>
+                        <th>Producto</th>
+                        <th>Cantidad Total Vendida</th>
+                        <th>Monto Total Vendido</th>
+                      </tr>
+                    </thead>
+                    <tbody id="verificacionBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================
+                NUEVO PANEL: OPERACIONES DE CAJA
+                ================================================================== -->
+        <div class="content-panel" id="panelOperacionesCaja" style="display: none;">
+          <h4>Operaciones de Caja</h4>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card p-3">
+                <h5 class="mb-3"><i class="bi bi-currency-dollar me-2"></i>Registrar Pago Consolidado</h5>
+                <form id="formRegistrarPago1">
+                  <!-- Formulario de Registrar Pago -->
+                </form>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card p-3">
+                <h5 class="mb-3"><i class="bi bi-box-arrow-up-right me-2"></i>Registrar Gasto/Egreso</h5>
+                <form id="formRegistrarEgreso1">
+                  <!-- Formulario de Registrar Gasto -->
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-panel" id="panelInventario" style="display: none;">
+          <div class="card p-3">
+            <h5 class="mb-3"><i class="bi bi-box-seam me-2"></i>Gestión de Inventario</h5>
+
+            <!-- Tarjetas de Resumen -->
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <div class="card text-white bg-primary">
+                  <div class="card-body">
+                    <h6 class="card-title">Valor del Inventario</h6>
+                    <h4 id="valorTotalInventario">S/ 0.00</h4>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card text-white bg-info">
+                  <div class="card-body">
+                    <h6 class="card-title">SKUs Únicos</h6>
+                    <h4 id="totalSkus">0</h4>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card text-white bg-warning">
+                  <div class="card-body">
+                    <h6 class="card-title">Items con Stock Bajo</h6>
+                    <h4 id="itemsStockBajo">0</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Barra de Acciones y Búsqueda -->
+            <div class="card p-3 mb-3">
+              <div class="row g-2 align-items-end">
+                <!-- <div class="col-lg-4">
+                    <label for="filtroInventario" class="form-label">Buscar:</label>
+                    <input type="text" id="filtroInventario" class="form-control" placeholder="Nombre o SKU">
+                </div> -->
+                <div class="col-lg-2">
+                  <label for="filtroCategoria" class="form-label">Categoría:</label>
+                  <select id="filtroCategoria" class="form-select">
+                                        <option value="">Todos</option>
+                                        </select>
+                </div>
+                <div class="col-lg-2">
+                  <label for="filtroEstado" class="form-label">Estado:</label>
+                  <select id="filtroEstado" class="form-select">
+                                        <option value="">Todos</option>
+                                        <option value="Activo">Activos</option>
+                                        <option value="Inactivo">Inactivos</option>
+                                        <option value="BajoStock">Bajo Stock</option>
+                                    </select>
+                </div>
+                <div class="col-lg-8 text-end">
+                  <div class="btn-group" role="group">
+                    <button id="btnRegistrarMovimiento" class="btn btn-info" title="Ajuste Manual de Stock"><i class="bi bi-arrow-down-up"></i></button>
+                    <button id="btnAgregarProducto" class="btn btn-success" title="Agregar Nuevo Producto"><i class="bi bi-plus-circle"></i></button>
+                    <button id="btnImportarProductos" class="btn btn-secondary" title="Importar desde Hoja"><i class="bi bi-file-earmark-arrow-up"></i></button>
+                    <button id="btnExportarInventario" class="btn btn-outline-success" title="Exportar a CSV"><i class="bi bi-file-earmark-excel"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabla de Inventario -->
+            <div class="table-responsive">
+              <table class="table table-sm table-hover w-100" id="tablaInventario">
+                <thead class="table-dark">
+                  <tr>
+                    <th>SKU</th>
+                    <th>Nombre</th>
+                    <th>Código Barras</th>
+                    <th>Categoría</th>
+                    <th>Stock</th>
+                    <th>Stock Mínimo</th>
+                    <th>Precio Costo</th>
+                    <th>Precio Venta</th>
+                    <th>Valor Stock</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="inventarioBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- RESTO DE PANELES (Inventario, Deudas, etc. sin cambios) -->
+        <div class="content-panel" id="panelPagos" style="display: none;"></div>
+        <div class="content-panel" id="panelDeudas" style="display: none;">
+          <div id="panelGestionDeudas" class="card p-3 mb-4" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0"><i class="bi bi-person-exclamation"></i> Gestión de Deudas</h5>
+              <div>
+                <button id="btnAnadirDeuda" class="btn btn-success"><i class="bi bi-plus-circle"></i> Añadir Nueva Deuda</button>
+                <button id="btnRefrescarDeudas" class="btn btn-sm btn-outline-secondary" title="Actualizar datos"><i class="bi bi-arrow-clockwise"></i></button>
+                <button type="button" class="btn-close" id="btnClosePanelDeudas"></button>
+              </div>
+            </div>
+            <ul class="nav nav-tabs mb-3">
+              <li class="nav-item">
+                <a class="nav-link active" id="tabDeudasPendientes" href="#">1. Deudas Pendientes</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="tabHistorialDeudas" href="#">2. Historial de Deudas Creadas</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="tabHistorialPagosDeuda" href="#">3. Historial de Pagos de Deuda</a>
+              </li>
+            </ul>
+            <div id="contenidoPanelDeudas">
+              <div class="input-group mb-3" style="max-width: 400px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="filtroDeudas" class="form-control" placeholder="Buscar por Cliente o DNI...">
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover" id="tablaDeudasPendientes">
+                  <thead class="table-dark">
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Monto Original</th>
+                      <th>Saldo Pendiente</th>
+                      <th>Fecha Creación</th>
+                      <th>Vencimiento</th>
+                      <th>Notas</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="deudasBody">
+                    <tr><td colspan="7" class="text-center">Cargando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="content-panel" id="panelGastos" style="display: none;"></div>
+        <div class="content-panel" id="panelReportes" style="display: none;" data-role="employee" data-perm="reportes">
+          <h5 class="text-info"><i class="bi bi-bar-chart"></i> Módulo de Reportes</h5>
+          <div class="mb-3">
+            <button class="btn btn-info">Ver reportes de ventas</button>
+            <button id="btnVerReporteVentas" class="btn btn-info">Reporte de Productos Vendidos</button>
+          </div>
+          <div id="panelReporteVentas" class="card p-3 mb-4" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="mb-0">Resumen de Productos Vendidos por Categoría</h6>
+              <button type="button" class="btn-close" id="btnClosePanelReportes"></button>
+            </div>
+            <div class="row g-3 align-items-end mb-3">
+              <div class="col-md-3">
+                <label class="form-label">Fecha Inicio</label>
+                <input type="date" id="reporteFechaInicio" class="form-control">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Fecha Fin</label>
+                <input type="date" id="reporteFechaFin" class="form-control">
+              </div>
+              <div class="col-md-3">
+                <button id="btnFiltrarReporte" class="btn btn-primary w-100">Reporte por Fechas</button>
+              </div>
+              <div class="col-md-3">
+                <button id="btnReporteSesionActual" class="btn btn-warning w-100">Reporte de Sesión Actual</button>
+              </div>
+            </div>
+            <div id="contenidoReporteVentas" class="table-responsive"></div>
+          </div>
+        </div>
+        <div class="content-panel" id="panelAdminEmpleados" style="display: none;">
+          <div class="card p-3">
+            <h5 class="mb-3"><i class="bi bi-people-fill me-2"></i>Gestión de Empleados</h5>
+            <div id="contenidoEmpleados">
+              <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Cargando datos...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="content-panel" id="panelAdminPermisos" style="display: none;">
+          <div class="card p-3">
+            <h5 class="mb-3"><i class="bi bi-key-fill me-2"></i>Gestión de Permisos por Rol</h5>
+            <div class="alert alert-info">
+              Selecciona un rol para ver y editar sus permisos.
+            </div>
+            <div class="mb-3">
+              <label for="selectRol" class="form-label">Seleccionar Rol</label>
+              <select id="selectRol" class="form-select w-50">
+                                </select>
+            </div>
+            <div id="contenidoPermisos">
+              <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Cargando permisos...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- =================================================================
+    MODALES (COMPLETOS)
+    ================================================================== -->
+  <div id="cajaBlocker" class="caja-blocker" style="display: none;"></div>
+  <div class="modal fade" id="modalAbrirCaja" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Iniciar Nuevo Turno de Caja</h5>
+        </div>
+        <div class="modal-body">
+          <p>Introduce el monto en efectivo con el que estás iniciando tu turno.</p>
+          <form id="formAbrirCaja">
+            <div class="input-group"><span class="input-group-text">S/</span><input type="number" id="montoApertura" class="form-control form-control-lg" placeholder="0.00" step="0.10" required autofocus>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" form="formAbrirCaja" class="btn btn-primary w-100">Iniciar Caja</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="modalCerrarCaja" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Cierre de Caja Final</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-secondary">Total Ventas de la App: <strong id="cierreTotalVentasApp">S/ 0.00</strong>
+            (<strong id="cierreQVentas">0</strong> productos)</div>
+          <form id="formCerrarCaja">
+            <div class="mb-3"><label class="form-label fw-bold">1. Caja de Cyberplanet</label>
+              <div class="input-group"><span class="input-group-text">S/</span><input type="number" id="cierreMontoCyberplanet" class="form-control" placeholder="0.00" step="0.10" required>
+              </div>
+            </div>
+            <div class="mb-3"><label class="form-label fw-bold">2. Movimientos Adicionales</label>
+              <ul class="list-group">
+                <li class="list-group-item d-flex justify-content-between align-items-center">(+) Total Pago de Deudas
+                  <small>(Efectivo)</small><span class="badge bg-success rounded-pill" id="cierrePagosDeuda">S/ 0.00</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">(-) Total Yape o
+                  Plin<span class="badge bg-danger rounded-pill" id="cierreYapePlin">S/ 0.00</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">(-) Total Deudas
+                  Nuevas<span class="badge bg-danger rounded-pill" id="cierreDeudasNuevas">S/ 0.00</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">(-) Total
+                  Gastos/Descuentos<span class="badge bg-danger rounded-pill" id="cierreEgresos">S/ 0.00</span></li>
+              </ul>
+            </div>
+            <div class="mb-3"><label class="form-label fw-bold">3. Efectivo Real Contado</label><input type="number" id="cierreMontoReal" class="form-control" placeholder="0.00" step="0.10" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Notas (Opcional)</label><textarea id="cierreNotas" class="form-control" rows="2"></textarea>
+            </div>
+          </form>
+          <div class="alert alert-info text-center">Efectivo Esperado en Caja:
+            <strong id="cierreMontoEsperado" class="fs-4">S/ 0.00</strong><br>Diferencia:
+            <strong id="cierreDiferencia" class="fs-4 fw-bold">S/ 0.00</strong></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="formCerrarCaja" class="btn btn-primary">Guardar y Cerrar Turno</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="modalDetalleVenta" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalDetalleVentaLabel">Detalles de la Venta</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="infoVenta" class="mb-3"></div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Producto</th>
+                <th>Cant.</th>
+                <th>Precio U.</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody id="modalDetalleBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="modalProducto" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalProductoLabel"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formProducto">
+            <div class="mb-2"><label class="form-label">SKU</label><input type="text" id="prodSku" class="form-control" required>
+            </div>
+            <div class="mb-2"><label class="form-label">Nombre</label><input type="text" id="prodNombre" class="form-control" required>
+            </div>
+            <div class="mb-2"><label class="form-label">Código de Barras</label><input type="text" id="prodCodigoBarras" class="form-control">
+            </div>
+            <div class="mb-2"><label class="form-label">Categoría</label>
+              <div class="input-group">
+                <select id="prodCategoria" class="form-select"></select><button id="btnNuevaCategoria" class="btn btn-outline-secondary" type="button" title="Crear nueva categoría">+</button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col"><label class="form-label">Stock</label><input type="number" id="prodStock" class="form-control" value="0">
+              </div>
+              <div class="col"><label class="form-label">Stock Mínimo</label><input type="number" id="prodStockMin" class="form-control" value="5">
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col"><label class="form-label">Precio Costo</label><input type="number" step="0.01" id="prodPrecioCosto" class="form-control">
+              </div>
+              <div class="col"><label class="form-label">Precio Venta</label><input type="number" step="0.01" id="prodPrecioVenta" class="form-control" required>
+              </div>
+            </div>
+            <div class="mb-2 mt-2"><label class="form-label">URL de Imagen</label><input type="text" id="prodImagenUrl" class="form-control">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="formProducto" class="btn btn-primary">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="modalMovimiento" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar Movimiento de Stock</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formMovimiento">
+            <div class="mb-3">
+              <label class="form-label">Producto (SKU)</label><input type="text" id="movSku" class="form-control" required list="listaSkus"><datalist
+                id="listaSkus"></datalist></div>
+            <div class="mb-3">
+              <label class="form-label">Tipo de Movimiento</label><select id="movTipo" class="form-select" required><option value="INGRESO">Ingreso por Compra</option><option value="BAJA_MERMA">Baja por Merma</option><option value="AJUSTE">Ajuste Manual</option></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Cantidad</label><input type="number" id="movCantidad" class="form-control" required><small class="form-text text-muted">Usa números positivos para ingresos y negativos para bajas.</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Notas (Opcional)</label><textarea id="movNotas" class="form-control" rows="2"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="formMovimiento" class="btn btn-primary">Registrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="modalPrevisualizacionImportar" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Previsualización de Importación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Se encontraron <strong id="previewValidos" class="text-success">0</strong> productos válidos para importar.
+          </p>
+          <div id="previewErrores" class="alert alert-warning" style="display:none;"></div>
+          <div class="table-responsive" style="max-height: 400px;">
+            <table class="table table-sm table-striped">
+              <thead id="previewThead"></thead>
+              <tbody id="previewTbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" id="btnConfirmarImportacion" class="btn btn-primary">Confirmar e Importar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="modalNuevaDeuda" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar Nueva Deuda Manual</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formNuevaDeuda">
+            <div class="mb-3">
+              <label class="form-label">Cliente</label><select id="deudaSelectCliente" class="form-select cliente-select" required></select>
+            </div>
+            <div class="mb-3"><label class="form-label">Monto de la Deuda</label>
+              <div class="input-group"><span class="input-group-text">S/</span><input type="number" id="deudaMonto" class="form-control" placeholder="0.00" step="0.10" required>
+              </div>
+            </div>
+            <div class="mb-3"><label class="form-label">Fecha de Vencimiento (Opcional)</label><input type="date" id="deudaFechaVencimiento" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Notas</label><textarea id="deudaNotas" class="form-control" rows="2" placeholder="Ej: Dejó DNI..."></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="formNuevaDeuda" class="btn btn-primary">Guardar Deuda</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="modalRegistrarPago" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar Pago de Consumo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formRegistrarPago">
+            <div class="mb-3">
+              <label class="form-label">Cliente</label><select id="pagoSelectCliente" class="form-select cliente-select"></select>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3"><label class="form-label">Total a Cobrar</label>
+                <div class="input-group"><span class="input-group-text">S/</span><input type="number" id="pagoConsumoTotal" class="form-control" placeholder="0.00" step="0.10" required>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3"><label class="form-label">Monto Pagado</label>
+                <div class="input-group"><span class="input-group-text">S/</span><input type="number" id="pagoMontoPagado" class="form-control" placeholder="0.00" step="0.10" required>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Método de Pago</label><select id="pagoMetodo" class="form-select" required><option value="Efectivo">Efectivo</option><option value="Yape/Plin">Yape/Plin</option></select>
+            </div>
+            <div class="mb-3"><label class="form-label">Referencia (Opcional)</label><input type="text" id="pagoReferencia" class="form-control" placeholder="Ej: Pago de PC5 + Gaseosa">
+            </div>
+            <div class="alert alert-warning">Deuda a Generar: <strong id="pagoDeudaGenerada">S/ 0.00</strong></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="formRegistrarPago" class="btn btn-primary">Guardar Pago</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="modalRegistrarEgreso" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar Gasto o Egreso</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formRegistrarEgreso">
+            <div class="mb-3">
+              <label class="form-label">Tipo de Egreso</label><select id="egresoTipo" class="form-select" required><option value="GASTO_OPERATIVO">Gasto Operativo</option><option value="DESCUENTO">Descuento</option><option value="RETIRO">Retiro de Efectivo</option></select>
+            </div>
+            <div class="mb-3"><label class="form-label">Monto</label>
+              <div class="input-group"><span class="input-group-text">S/</span><input type="number" id="egresoMonto" class="form-control" placeholder="0.00" step="0.10" required>
+              </div>
+            </div>
+            <div class="mb-3"><label class="form-label">Descripción</label><input type="text" id="egresoDescripcion" class="form-control" placeholder="Ej: Compra de gaseosas" required>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="formRegistrarEgreso" class="btn btn-primary">Guardar Egreso</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================
+    SCRIPTS
+    ================================================================== -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js">
+  </script>
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js">
+  </script>
+
+  <?!= include('js'); ?>
+
+</body>
+
+</html>
