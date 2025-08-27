@@ -74,6 +74,7 @@ function include(filename) {
  * @param {string} password La contraseña en texto plano.
  * @returns {object|null} Datos del usuario con permisos, o null si falla.
  */
+// Moved to Auth.gs
 function iniciarSesion(email, password) {
   // Verificar límites de intentos
   const props = PropertiesService.getUserProperties();
@@ -177,6 +178,7 @@ function iniciarSesion(email, password) {
  * @param {string} email El email del usuario.
  * @returns {object} Resultado de la operación.
  */
+// Moved to Auth.gs
 function enviarResetPassword(email) {
   const { headers, data } = obtenerDatosHoja(SHEETS.EMPLEADOS);
   const idx = { email: headers.indexOf('Email'), id: headers.indexOf('EmpleadoID') };
@@ -215,6 +217,7 @@ function enviarResetPassword(email) {
  * @param {string} newPassword Nueva contraseña.
  * @returns {object} Resultado de la operación.
  */
+// Moved to Auth.gs
 function procesarResetPassword(token, newPassword) {
   const props = PropertiesService.getScriptProperties();
   const tokenDataStr = props.getProperty(`reset_token_${token}`);
@@ -268,6 +271,7 @@ function procesarResetPassword(token, newPassword) {
  * Obtiene la lista completa de empleados para el panel de administración.
  * @returns {object[]} Lista de empleados.
  */
+// Moved to Auth.gs
 function obtenerEmpleados() {
   const { headers, data } = obtenerDatosHoja(SHEETS.EMPLEADOS);
   if (!data.length) return [];
@@ -294,6 +298,7 @@ function obtenerEmpleados() {
  * @param {string} rol El nombre del rol.
  * @returns {Array<object>} Lista de permisos.
  */
+// Moved to Auth.gs
 function obtenerPermisosPorRol(rol) {
   const { headers, data } = obtenerDatosHoja(SHEETS.PERMISOS);
   if (!headers.length) return [];
@@ -320,6 +325,7 @@ function obtenerPermisosPorRol(rol) {
  * @param {Array<object>} nuevosPermisos Lista de permisos { modulo, accion, permitido }.
  * @returns {object} Resultado de la operación.
  */
+// Moved to Auth.gs
 function guardarPermisos(rol, nuevosPermisos) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
@@ -369,6 +375,7 @@ function guardarPermisos(rol, nuevosPermisos) {
  * @param {string} accion Operación ('CREAR', 'EDITAR', 'DESACTIVAR').
  * @returns {object} Resultado de la operación.
  */
+// Moved to Auth.gs
 function gestionarEmpleado(empleadoData, accion) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
@@ -464,11 +471,13 @@ function gestionarEmpleado(empleadoData, accion) {
 /**
  * FUNCIÓN TEMPORAL PARA GENERAR UN HASH DE CONTRASEÑA (para pruebas).
  */
+// Moved to Auth.gs
 function generarHashParaTest(password) {
   const { hash, salt } = hashPassword(password);
   Logger.log(`Hash: ${hash}\nSalt: ${salt}`);
 }
 
+// Moved to Auth.gs
 function generarNuevaClave() {
   generarHashParaTest("1234"); // <- Aquí pones tu nueva clave
 }
@@ -486,6 +495,7 @@ function generarNuevaClave() {
  * Sanitiza las fechas antes de devolver el objeto para evitar errores de comunicación.
  * @returns {object|null} El objeto de la sesión abierta o null.
  */
+// Moved to Caja.gs
 function obtenerEstadoCajaActual() {
   const { headers, data } = obtenerDatosHoja(SHEETS.SESIONES_CAJA);
   if (!headers.length || data.length === 0) return null;
@@ -516,6 +526,7 @@ function obtenerEstadoCajaActual() {
  * @param {string} emailUsuario - El email del usuario que está abriendo la caja.
  * @returns {object} El objeto de la nueva sesión creada.
  */
+// Moved to Caja.gs
 function iniciarNuevaSesion(montoApertura, emailUsuario) {
   const sesionActual = obtenerEstadoCajaActual();
   if (sesionActual) {
@@ -560,6 +571,7 @@ function iniciarNuevaSesion(montoApertura, emailUsuario) {
  * @param {string} sesionID - El ID de la sesión que se está cerrando.
  * @returns {object} Un objeto con todos los totales calculados para el cierre.
  */
+// Moved to Caja.gs
 function obtenerResumenParaCierre(sesionID) {
   const { data: movData, headers: movHeaders } = obtenerDatosHoja(SHEETS.MOVIMIENTOS_CAJA);
   const { data: ventasData, headers: ventasHeaders } = obtenerDatosHoja(SHEETS.VENTAS);
@@ -617,6 +629,7 @@ function obtenerResumenParaCierre(sesionID) {
  * @param {object} datosCierre - Objeto con { sesionID, montoCyberplanet, montoReal, emailUsuario, notas }.
  * @returns {object} Un objeto con el resumen final del cierre.
  */
+// Moved to Caja.gs
 function finalizarCierreCaja(datosCierre) {
   const { sesionID, montoCyberplanet, montoReal, emailUsuario, notas } = datosCierre;
 
@@ -685,6 +698,7 @@ function finalizarCierreCaja(datosCierre) {
  * @param {object} ordenData - Objeto con { carrito, cliente, sesionID, usuarioEmail, pc }.
  * @returns {object} Un objeto confirmando el ID y total de la venta registrada.
  */
+// Moved to Ventas.gs
 function registrarOrdenDeVenta(ordenData) {
   const ss = SPREADSHEET;
   const ahora = new Date();
@@ -741,6 +755,7 @@ function registrarOrdenDeVenta(ordenData) {
  * { cliente, totalACobrar, montoPagado, metodoPago, descripcion, sesionID, usuarioEmail }
  * @returns {object} Un mensaje de confirmación del resultado.
  */
+// Moved to Ventas.gs
 function registrarPagoConsolidado(pagoData) {
   const { cliente, totalACobrar, montoPagado, metodoPago, sesionID, usuarioEmail } = pagoData;
 
@@ -783,6 +798,7 @@ function registrarPagoConsolidado(pagoData) {
  * @param {string} sesionID El ID de la sesión a procesar.
  * @param {string} nuevoEstado El nuevo estado, ej. 'Pagada' o 'Cancelada'.
  */
+// Moved to Ventas.gs
 function actualizarEstadoVentasDeSesion(sesionID, nuevoEstado) {
     const ventasSheet = SPREADSHEET.getSheetByName(SHEETS.VENTAS);
     const { headers, data } = obtenerDatosHoja(SHEETS.VENTAS);
@@ -802,6 +818,7 @@ function actualizarEstadoVentasDeSesion(sesionID, nuevoEstado) {
  * @param {string} accion - La acción a realizar ('CONFIRMAR' o 'CANCELAR').
  * @returns {string} Un mensaje de confirmación del resultado.
  */
+// Moved to Ventas.gs
 function gestionarOrdenVenta(ventaID, accion) {
   Logger.log(`Recibida solicitud para ${accion} la VentaID: ${ventaID}`);
   const ss = SPREADSHEET;
@@ -889,6 +906,7 @@ function gestionarOrdenVenta(ventaID, accion) {
  * Obtiene todas las ventas y sus detalles.
  * @returns {Array} Un array de objetos de venta, cada uno con sus detalles.
  */
+// Moved to Ventas.gs
 function obtenerHistorialVentas() {
   const { headers, data } = obtenerDatosHoja(SHEETS.VENTAS);
   
@@ -913,6 +931,7 @@ function obtenerHistorialVentas() {
  * @param {string} ventaID - El ID de la venta a buscar.
  * @returns {Array<object>} Un array con los productos de esa venta.
  */
+// Moved to Ventas.gs
 function obtenerDetallesDeVenta(ventaID) {
   const { headers, data } = obtenerDatosHoja(SHEETS.SALES_DETAILS);
   const ventaIdIndex = headers.indexOf('VentaID');
@@ -938,6 +957,7 @@ function obtenerDetallesDeVenta(ventaID) {
  * Obtiene la lista de clientes para usar en los menús desplegables.
  * @returns {object[]} Un array de objetos de clientes.
  */
+// Moved to Ventas.gs
 function obtenerClientes() {
   const { headers, data } = obtenerDatosHoja(SHEETS.CLIENTES);
   if (!headers.length) return [];
@@ -971,6 +991,7 @@ function obtenerClientes() {
  * @param {object} cliente - El objeto del cliente con sus datos.
  * @returns {object} El objeto del cliente registrado para confirmación.
  */
+// Moved to Ventas.gs
 function registrarNuevoCliente(cliente) {
   const hoja = SPREADSHEET.getSheetByName(SHEETS.CLIENTES);
   
@@ -1003,6 +1024,7 @@ function registrarNuevoCliente(cliente) {
  * Obtiene la lista completa de productos del inventario para la gestión.
  * @returns {Array} Un array de objetos, donde cada objeto es un producto.
  */
+// Moved to Inventario.gs
 function obtenerInventarioCompleto() {
   const { headers, data } = obtenerDatosHoja(SHEETS.PRODUCTOS);
   if (!headers.length) return [];
@@ -1026,6 +1048,7 @@ function obtenerInventarioCompleto() {
  * Obtiene todos los productos activos para mostrarlos en la galería de ventas.
  * @returns {object[]} Un array de objetos de productos.
  */
+// Moved to Inventario.gs
 function obtenerProductosActivos() {
   const { headers, data } = obtenerDatosHoja(SHEETS.PRODUCTOS);
   if (!headers.length) return [];
@@ -1059,6 +1082,7 @@ function obtenerProductosActivos() {
  * @param {object} producto - El objeto del producto a añadir.
  * @returns {object} El producto añadido para confirmación.
  */
+// Moved to Inventario.gs
 function agregarProductoNuevo(producto) {
   const productosSheet = SPREADSHEET.getSheetByName(SHEETS.PRODUCTOS);
   
@@ -1084,6 +1108,7 @@ function agregarProductoNuevo(producto) {
  * @param {string} accion - La operación: 'EDITAR' o 'DESACTIVAR'.
  * @returns {object} Un mensaje de confirmación.
  */
+// Moved to Inventario.gs
 function gestionarProducto(productoData, accion) {
     const productosSheet = SPREADSHEET.getSheetByName(SHEETS.PRODUCTOS);
     const { headers, data } = obtenerDatosHoja(SHEETS.PRODUCTOS);
@@ -1119,6 +1144,7 @@ function gestionarProducto(productoData, accion) {
  * @param {string} emailUsuario - El email del usuario que realiza la venta.
  * @returns {string} Un mensaje de éxito.
  */
+// Moved to Inventario.gs
 function procesarVenta(itemsVenta, emailUsuario = 'SISTEMA') {
   for (const item of itemsVenta) {
     const movimiento = {
@@ -1138,6 +1164,7 @@ function procesarVenta(itemsVenta, emailUsuario = 'SISTEMA') {
  * @param {object} movimiento - Un objeto con { sku, tipo, cantidad, notas, emailUsuario }.
  * @returns {string} Un mensaje de confirmación.
  */
+// Moved to Inventario.gs
 function registrarMovimientoInventario(movimiento) {
   const productosSheet = SPREADSHEET.getSheetByName(SHEETS.PRODUCTOS);
   const movimientosSheet = SPREADSHEET.getSheetByName(SHEETS.MOVIMIENTOS_INVENTARIO);
@@ -1171,6 +1198,7 @@ function registrarMovimientoInventario(movimiento) {
  * @param {string} sku - El SKU del producto a buscar.
  * @returns {Array} Un array con todos los movimientos del producto.
  */
+// Moved to Inventario.gs
 function obtenerHistorialProducto(sku) {
   const { headers, data } = obtenerDatosHoja(SHEETS.MOVIMIENTOS_INVENTARIO);
   const skuIndex = headers.indexOf('SKU');
@@ -1195,6 +1223,7 @@ function obtenerHistorialProducto(sku) {
  * @param {string} codigo El código de barras a buscar.
  * @returns {object|null} El objeto del producto o null si no se encuentra.
  */
+// Moved to Inventario.gs
 function buscarProductoPorCodigoBarras(codigo) {
   const { headers, data } = obtenerDatosHoja(SHEETS.PRODUCTOS);
   if (!headers.length) return null;
@@ -1218,6 +1247,7 @@ function buscarProductoPorCodigoBarras(codigo) {
  * Devuelve una lista de todas las categorías de productos únicas y ordenadas.
  * @returns {Array<string>} Un array de strings con los nombres de las categorías.
  */
+// Moved to Inventario.gs
 function obtenerCategoriasUnicas() {
   const { headers, data } = obtenerDatosHoja(SHEETS.PRODUCTOS);
   const categoriaIndex = headers.indexOf('Categoria');
@@ -1230,6 +1260,7 @@ function obtenerCategoriasUnicas() {
  * Lee la hoja 'Importar', la valida y devuelve una previsualización.
  * @returns {object} Un objeto con { productosValidos: [], errores: [] }.
  */
+// Moved to Inventario.gs
 function previsualizarImportacion() {
   const importSheet = SPREADSHEET.getSheetByName('Importar');
   if (!importSheet) throw new Error("No se encontró la hoja 'Importar'.");
@@ -1265,6 +1296,7 @@ function previsualizarImportacion() {
  * @param {Array<object>} productosAImportar - La lista de productos a guardar.
  * @returns {string} Un mensaje de confirmación del resultado.
  */
+// Moved to Inventario.gs
 function ejecutarImportacion(productosAImportar) {
   if (!productosAImportar || productosAImportar.length === 0) {
     return "No se proporcionaron productos válidos para importar.";
@@ -1299,6 +1331,7 @@ function ejecutarImportacion(productosAImportar) {
  * @param {object} filtros Un objeto con { fechaInicio, fechaFin }.
  * @returns {object} Un objeto con { historial, resumenGrafico }.
  */
+// Moved to Reportes.gs
 function obtenerDatosDashboard(filtros) {
   const { headers, data: historialCompleto } = obtenerDatosHoja(SHEETS.RESUMENES_CIERRE);
   if (!historialCompleto.length) return { historial: [], resumenGrafico: { labels: [], ventas: [], egresos: [] } };
@@ -1345,6 +1378,7 @@ function obtenerDatosDashboard(filtros) {
  * @param {object} filtros Un objeto con { fechaInicio, fechaFin }.
  * @returns {object} Un objeto con los totales de ingresos, egresos y créditos.
  */
+// Moved to Reportes.gs
 function obtenerReporteFlujoDinero(filtros) {
   const { data: movData, headers: movHeaders } = obtenerDatosHoja(SHEETS.MOVIMIENTOS_CAJA);
   if (!movData.length) return {};
@@ -1388,6 +1422,7 @@ function obtenerReporteFlujoDinero(filtros) {
  * @param {object} filtros Un objeto con { fechaInicio, fechaFin }.
  * @returns {object} Un objeto con los resultados del análisis de rentabilidad.
  */
+// Moved to Reportes.gs
 function obtenerReporteRentabilidad(filtros) {
   // 1. Obtener ventas del período
   const { data: ventasData, headers: ventasHeaders } = obtenerDatosHoja(SHEETS.VENTAS);
@@ -1446,6 +1481,7 @@ function obtenerReporteRentabilidad(filtros) {
  * @param {object} filtros Un objeto con { fechaInicio, fechaFin }.
  * @returns {object} Un objeto con datos para los gráficos.
  */
+// Moved to Reportes.gs
 function obtenerMetricasBI(filtros) {
   // 1. Obtener ventas y detalles del período
   const { data: ventasData, headers: ventasHeaders } = obtenerDatosHoja(SHEETS.VENTAS);
@@ -1510,6 +1546,7 @@ function obtenerMetricasBI(filtros) {
  * Obtiene todos los datos necesarios para el módulo de deudas en una sola llamada.
  * @returns {object} Un objeto con las deudas pendientes, historial de deudas y pagos.
  */
+// Moved to Deudas.gs
 function obtenerDatosCompletosDeudas() {
   return {
     pendientes: obtenerDeudasPendientes(),
@@ -1523,6 +1560,7 @@ function obtenerDatosCompletosDeudas() {
  * Obtiene una lista de todas las deudas individuales con estado 'Pendiente'.
  * @returns {Array<object>} Un array de objetos, donde cada objeto es una deuda pendiente.
  */
+// Moved to Deudas.gs
 function obtenerDeudasPendientes() {
   const { headers, data } = obtenerDatosHoja(SHEETS.DEUDAS_CLIENTES);
   if (!headers.length) return [];
@@ -1549,6 +1587,7 @@ function obtenerDeudasPendientes() {
  * Obtiene el historial completo de todas las deudas creadas, sin importar su estado.
  * @returns {Array<object>} Un array de objetos de deuda, ordenados por fecha.
  */
+// Moved to Deudas.gs
 function obtenerHistorialCompletoDeudas() {
   const { headers, data } = obtenerDatosHoja(SHEETS.DEUDAS_CLIENTES);
   if (!headers.length) return [];
@@ -1574,6 +1613,7 @@ function obtenerHistorialCompletoDeudas() {
  * Obtiene el historial de todos los pagos que han sido aplicados a deudas.
  * @returns {Array<object>} Un array de objetos de pago, ordenados por fecha.
  */
+// Moved to Deudas.gs
 function obtenerHistorialPagosDeuda() {
   const { headers, data } = obtenerDatosHoja(SHEETS.PAGO_DEUDAS);
   if (!headers.length) return [];
@@ -1596,6 +1636,7 @@ function obtenerHistorialPagosDeuda() {
  * @param {object} datosDeuda - { cliente, monto, fechaVencimiento, notas, sesionID, usuarioEmail }.
  * @returns {object} El objeto de la deuda creada.
  */
+// Moved to Deudas.gs
 function crearNuevaDeuda(datosDeuda) {
   if (!datosDeuda.monto || datosDeuda.monto <= 0) throw new Error("El monto debe ser positivo.");
   if (!datosDeuda.cliente.dni) throw new Error("Debe seleccionar un cliente.");
@@ -1635,6 +1676,7 @@ function crearNuevaDeuda(datosDeuda) {
  * @param {object} datosPago - { deudaID, monto, metodoPago, notas, sesionID, usuarioEmail, clienteID }.
  * @returns {object} Un mensaje de confirmación.
  */
+// Moved to Deudas.gs
 function registrarPagoDeDeuda(datosPago) {
   if (!datosPago.monto || datosPago.monto <= 0) throw new Error("El monto del pago debe ser positivo.");
   if (!datosPago.deudaID) throw new Error("No se especificó un ID de deuda.");
@@ -1672,6 +1714,7 @@ function registrarPagoDeDeuda(datosPago) {
  * Función auxiliar que recalcula los totales de una deuda específica y actualiza su estado.
  * @param {string} deudaID El ID de la deuda a recalcular.
  */
+// Moved to Deudas.gs
 function actualizarEstadoDeuda(deudaID) {
   const deudasSheet = SPREADSHEET.getSheetByName(SHEETS.DEUDAS_CLIENTES);
   const { headers: deudasHeaders, data: deudasData } = obtenerDatosHoja(SHEETS.DEUDAS_CLIENTES);
@@ -1703,6 +1746,7 @@ function actualizarEstadoDeuda(deudaID) {
  * @param {object} datosEgreso - { tipo, monto, descripcion, sesionID, usuarioEmail }.
  * @returns {string} Mensaje de éxito.
  */
+// Moved to Egresos.gs
 function registrarNuevoEgreso(datosEgreso) {
   if (!datosEgreso.monto || datosEgreso.monto <= 0) throw new Error("El monto del egreso debe ser positivo.");
 
@@ -1729,6 +1773,7 @@ function registrarNuevoEgreso(datosEgreso) {
  * Lee la hoja de Productos y genera un contenido en formato CSV para ser exportado.
  * @returns {string} El contenido completo del archivo CSV como un string.
  */
+// Moved to Inventario.gs
 function exportarInventarioCSV() {
   const inventario = obtenerInventarioCompleto(); // ya lo tienes implementado
   if (!inventario || inventario.length === 0) return '';
@@ -1774,6 +1819,7 @@ function exportarInventarioCSV() {
  * @returns {object} Un objeto estructurado con los datos para el reporte.
  */
 
+// Moved to Reportes.gs
 function obtenerResumenProductosVendidos(filtros) {
   const { headers: ventasHeaders, data: ventasData } = obtenerDatosHoja(SHEETS.VENTAS);
   let ventasFiltradas = [];
@@ -1860,6 +1906,7 @@ function obtenerResumenProductosVendidos(filtros) {
  * para ser usadas en selectores/dropdowns.
  * @returns {Array<object>} Un array de objetos, cada uno con SesionID y una descripción.
  */
+// Moved to Caja.gs
 function obtenerHistorialSesiones() {
   const { headers, data } = obtenerDatosHoja(SHEETS.SESIONES_CAJA);
   if (!data.length) return [];
@@ -1889,6 +1936,7 @@ function obtenerHistorialSesiones() {
  * @param {string} sesionID - El ID de la sesión de caja a analizar.
  * @returns {Array<object>} Un array de objetos, cada uno representando un producto y su cantidad total vendida.
  */
+// Moved to Reportes.gs
 function obtenerResumenProductosVendidosPorSesion(sesionID) {
   // 1. Obtener las ventas de la sesión
   const { data: ventasData, headers: ventasHeaders } = obtenerDatosHoja(SHEETS.VENTAS);
@@ -1937,6 +1985,7 @@ function obtenerResumenProductosVendidosPorSesion(sesionID) {
 // FIN DEL MÓDULO
 // ==================================================================
 
+// Moved to Auth.gs
 function resetLoginAttempts(email) {
   PropertiesService.getUserProperties().deleteProperty(`login_attempts_${email}`);
   PropertiesService.getUserProperties().deleteProperty(`lockout_until_${email}`);
