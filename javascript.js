@@ -200,7 +200,7 @@
         },
         Inventario: {
           Ver: '#panelInventario',
-          Registrar: '#btnAgregarProducto, #btnImportarInventario'
+          Registrar: '#btnAgregarProducto, #btnImportarProductos'
         },
         Pagos: {
           Ver: '#panelPagos',
@@ -257,38 +257,7 @@
     // 2. MÓDULO DE AUTENTICACIÓN Y UI PRINCIPAL
     //----------------------------------------------------
 
-    /**
-     * Maneja el envío del formulario de login.
-     */
-    $('#loginForm').off('submit').on('submit', function (event) {
-      event.preventDefault();
-      const email = $('#username').val().trim();
-      const password = $('#password').val().trim();
-
-      if (!email || !password) {
-        showError('Campos vacíos', 'Por favor, completa todos los campos.');
-        return;
-      }
-
-      setLoginButtonState(true);
-
-      google.script.run
-        .withSuccessHandler((user) => {
-          appState.user = user;
-          $('#loginPage').hide();
-          $('#mainApp').show();
-          $('#user-name').text(user.nombre);
-          $('#user-email').text(user.email);
-          restrictUIByPermissions(); // Aplicar restricciones de permisos
-          verificarEstadoDeCajaAlCargar();
-          showToast('success', `Bienvenido, ${user.nombre}`);
-        })
-        .withFailureHandler((err) => {
-          showError('Error de inicio de sesión', err.message);
-          setLoginButtonState(false);
-        })
-        .iniciarSesion(email, password);
-    });
+    
 
     /**
      * Maneja el clic en el link de "Olvidé mi contraseña".
@@ -2025,27 +1994,7 @@
       }
     });
 
-    $(document).on('click', '.cancelar-venta', function () {
-      const ventaID = $(this).data('id');
-      Swal.fire({
-        title: '¿Cancelar esta venta?',
-        text: `Se cancelará la venta ${ventaID} y el stock será devuelto. ¡Esta acción no se puede deshacer!`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        confirmButtonText: 'Sí, ¡cancelar!',
-      }).then((result) => {
-        if (result.isConfirmed) {
-          google.script.run
-            .withSuccessHandler((res) => {
-              Swal.fire('Cancelada', res, 'success');
-              cargarHistorialVentas();
-            })
-            .withFailureHandler((err) => showError('Error', err.message))
-            .cancelarVenta(ventaID);
-        }
-      });
-    });
+    
 
     //----------------------------------------------------
     // 10. MÓDULO DE DASHBOARD Y REPORTES
