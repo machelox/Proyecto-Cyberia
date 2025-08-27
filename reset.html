@@ -17,7 +17,7 @@
           <div class="card-body">
             <h4 class="card-title text-center">Restablecer Contraseña</h4>
             <form id="resetForm">
-              <input type="hidden" id="token" value="<?!= HtmlService.createHtmlOutputFromFile('js').getContent().includes('action=reset') ? new URLSearchParams(window.location.search).get('token') : '' ?>">
+              <input type="hidden" id="token" value="">
               <div class="mb-3">
                 <label for="newPassword" class="form-label">Nueva Contraseña</label>
                 <input type="password" id="newPassword" class="form-control" required>
@@ -37,6 +37,10 @@
   </div>
   <script>
     $(document).ready(function () {
+      // Leer el token de la URL en el cliente y colocarlo en el campo oculto
+      const params = new URLSearchParams(window.location.search);
+      const tokenFromUrl = params.get('token') || '';
+      $('#token').val(tokenFromUrl);
       $('#resetForm').on('submit', function (e) {
         e.preventDefault();
         const token = $('#token').val();

@@ -109,6 +109,21 @@
     }
 
     /**
+     * Escapa caracteres HTML para prevenir XSS al inyectar texto en el DOM.
+     * @param {any} str - Valor a escapar.
+     * @returns {string} Texto seguro para HTML.
+     */
+    function escapeHTML(str) {
+      if (str === undefined || str === null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    /**
      * Función auxiliar para aplicar DataTables, asegurando la destrucción previa.
      * @param {string} tableId - El ID de la tabla (ej. '#tablaInventario').
      */
@@ -1508,14 +1523,17 @@
       }
 
       productosFiltrados.forEach((prod) => {
+        const nombre = escapeHTML(prod.nombre);
+        const sku = escapeHTML(prod.sku);
+        const imagen = escapeHTML(prod.imagen || 'https://via.placeholder.com/150');
         const card = `
             <div class="col-6 col-md-3 col-lg-2 mb-3">
               <div class="card h-100 producto-item shadow-sm" style="cursor: pointer;" 
-                  data-sku="${prod.sku}" data-nombre="${prod.nombre}" data-precio="${prod.precioVenta}">
-                <img src="${prod.imagen || 'https://via.placeholder.com/150'}" class="card-img-top" alt="${prod.nombre}" style="height:120px; object-fit:cover;">
+                  data-sku="${sku}" data-nombre="${nombre}" data-precio="${Number(prod.precioVenta)}">
+                <img src="${imagen}" class="card-img-top" alt="${nombre}" style="height:120px; object-fit:cover;">
                 <div class="card-body p-2">
-                  <h6 class="card-title mb-1 small text-truncate">${prod.nombre}</h6>
-                  <p class="fw-bold text-success mb-0">S/ ${prod.precioVenta.toFixed(2)}</p>
+                  <h6 class="card-title mb-1 small text-truncate">${nombre}</h6>
+                  <p class="fw-bold text-success mb-0">S/ ${Number(prod.precioVenta).toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -1564,13 +1582,17 @@
         );
       } else {
         appState.carrito.forEach((item) => {
-          const subtotal = item.precio * item.cantidad;
+          const nombre = escapeHTML(item.nombre);
+          const sku = escapeHTML(item.sku);
+          const precio = Number(item.precio) || 0;
+          const cantidad = Number(item.cantidad) || 0;
+          const subtotal = precio * cantidad;
           totalGeneral += subtotal;
           tbody.append(`
-          <tr data-sku="${item.sku}">
-            <td>${item.nombre}</td>
-            <td><input type="number" class="form-control form-control-sm cantidad-item" value="${item.cantidad}" min="1" style="width: 80px;"></td>
-            <td>S/ ${item.precio.toFixed(2)}</td>
+          <tr data-sku="${sku}">
+            <td>${nombre}</td>
+            <td><input type="number" class="form-control form-control-sm cantidad-item" value="${cantidad}" min="1" style="width: 80px;"></td>
+            <td>S/ ${precio.toFixed(2)}</td>
             <td class="fw-bold">S/ ${subtotal.toFixed(2)}</td>
             <td><button class="btn btn-sm btn-danger quitar-item"><i class="bi bi-trash"></i></button></td>
           </tr>`);
@@ -1823,16 +1845,20 @@
       } else {
           // Llenamos el tbody con las nuevas filas.
           ventas.forEach((venta) => {
+              const estado = escapeHTML(venta.Estado);
+              const ventaId = escapeHTML(venta.VentaID);
+              const usuario = escapeHTML(venta.UsuarioEmail);
+              const cliente = escapeHTML(venta.ClienteNombre);
               const estadoBadge = obtenerBadgeEstado(venta.Estado);
               const botonesAccion = generarBotonesAccion(venta.Estado, venta.VentaID);
               const fila = `
                   <tr>
-                      <td>${venta.VentaID}</td>
+                      <td>${ventaId}</td>
                       <td>${formatearFechaHora(venta.FechaHora)}</td>
-                      <td>${venta.UsuarioEmail}</td>
-                      <td>${venta.ClienteNombre}</td>
+                      <td>${usuario}</td>
+                      <td>${cliente}</td>
                       <td>S/ ${Number(venta.Total).toFixed(2)}</td>
-                      <td><span class="badge ${estadoBadge}">${venta.Estado}</span></td>
+                      <td><span class="badge ${estadoBadge}">${estado}</span></td>
                       <td class="text-nowrap">${botonesAccion}</td>
                   </tr>
               `;
