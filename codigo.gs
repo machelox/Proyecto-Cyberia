@@ -13,14 +13,14 @@ function doGet(e) {
       .setTitle('Restablecer Contraseña - Cyberia Admin')
       .setFaviconUrl('https://i.postimg.cc/7LRGw3XG/Dise-o-sin-t-tulo-4.png')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
   }
   const template = HtmlService.createTemplateFromFile('index.html');
   return template.evaluate()
     .setTitle('Cyberia Admin')
     .setFaviconUrl('https://i.postimg.cc/7LRGw3XG/Dise-o-sin-t-tulo-4.png')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 /**
@@ -659,7 +659,7 @@ function obtenerResumenParaCierre(sesionID) {
     totalVentasApp,
     qVentas: qProductosVendidos,
     totalPagosDeudaEfectivo,
-    totalYapePlin,
+    totalVentasYapePlin,
     totalDeudasNuevas,
     totalGastos: Math.abs(totalGastos) // Devolvemos como valor positivo
   };
@@ -1830,7 +1830,7 @@ function exportarInventarioCSV() {
  */
 
 function obtenerResumenProductosVendidos(filtros) {
-  const { headers: ventasHeaders, data: ventasData } = obtenerDatosHoja(SHEETS.SALES);
+  const { headers: ventasHeaders, data: ventasData } = obtenerDatosHoja(SHEETS.VENTAS);
   let ventasFiltradas = [];
 
   // --- LÓGICA DE FILTRADO MEJORADA ---
@@ -1996,4 +1996,3 @@ function resetLoginAttempts(email) {
   PropertiesService.getUserProperties().deleteProperty(`login_attempts_${email}`);
   PropertiesService.getUserProperties().deleteProperty(`lockout_until_${email}`);
 }
-resetLoginAttempts('gamercyberia@gmail.com');  // Reemplaza con tu email
