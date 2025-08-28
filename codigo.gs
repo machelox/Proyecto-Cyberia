@@ -251,8 +251,12 @@ function procesarResetPassword(token, newPassword) {
     const { hash, salt } = hashPassword(newPassword);
     const sheet = SPREADSHEET.getSheetByName(SHEETS.EMPLEADOS);
     const fila = filaIndex + 2;
-    sheet.getRange(fila, idx.password + 1).setValue(hash);
-    sheet.getRange(fila, idx.salt + 1).setValue(salt);
+    
+    // Optimización: Actualizar hash y salt en una sola operación
+    const valoresAActualizar = [hash, salt];
+    const columnasAActualizar = [idx.password + 1, idx.salt + 1];
+    sheet.getRange(fila, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
+    
     props.deleteProperty(`reset_token_${token}`);
     registrarLog('RESET_PASSWORD_EXITOSO', tokenData.email, 'Contraseña restablecida');
     return { message: 'Contraseña restablecida con éxito.' };
@@ -434,13 +438,25 @@ function gestionarEmpleado(empleadoData, accion) {
         }
 
         const fila = filaIndex + 2;
-        sheet.getRange(fila, headers.indexOf('Nombre') + 1).setValue(empleadoData.nombre);
-        sheet.getRange(fila, headers.indexOf('Rol') + 1).setValue(empleadoData.rol);
+        
+        // Optimización: Preparar valores para actualización por lotes
+        const valoresAActualizar = [empleadoData.nombre, empleadoData.rol];
+        const columnasAActualizar = [
+          headers.indexOf('Nombre') + 1,
+          headers.indexOf('Rol') + 1
+        ];
+        
         if (empleadoData.password) {
           const { hash, salt } = hashPassword(empleadoData.password);
-          sheet.getRange(fila, headers.indexOf('PasswordHash') + 1).setValue(hash);
-          sheet.getRange(fila, headers.indexOf('Salt') + 1).setValue(salt);
+          valoresAActualizar.push(hash, salt);
+          columnasAActualizar.push(
+            headers.indexOf('PasswordHash') + 1,
+            headers.indexOf('Salt') + 1
+          );
         }
+        
+        // Optimización: Actualizar todas las columnas en una sola operación
+        sheet.getRange(fila, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
         registrarLog('EDITAR_EMPLEADO_EXITOSO', empleadoData.email, `Empleado editado: ${empleadoData.empleadoId}`);
         return { status: 'ok', message: 'Empleado actualizado correctamente.' };
       }
@@ -669,16 +685,33 @@ function finalizarCierreCaja(datosCierre) {
       const filaAActualizar = filaIndex + 2; // +1 por el header, +1 por base 1
       const horaCierre = Utilities.formatDate(ahora, TIMEZONE, "HH:mm:ss");
 
-      // Actualizamos los campos correspondientes a la fila de la sesión
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('Estado') + 1).setValue('Cerrada');
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('FechaCierre') + 1).setValue(fechaCierre);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('HoraCierre') + 1).setValue(horaCierre);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('UsuarioCierreEmail') + 1).setValue(emailUsuario);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('TotalVentas') + 1).setValue(totalVentasApp);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('TotalEfectivoCalculado') + 1).setValue(efectivoEsperado);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('MontoCierreReal') + 1).setValue(montoReal);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('Diferencia') + 1).setValue(diferencia);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('Notas') + 1).setValue(notas || '');
+      // Optimización: Actualizar múltiples columnas en una sola operación usando setValues
+      const valoresAActualizar = [
+        'Cerrada',
+        fechaCierre,
+        horaCierre,
+        emailUsuario,
+        totalVentasApp,
+        efectivoEsperado,
+        montoReal,
+        diferencia,
+        notas || ''
+      ];
+      
+      const columnasAActualizar = [
+        sesionHeaders.indexOf('Estado') + 1,
+        sesionHeaders.indexOf('FechaCierre') + 1,
+        sesionHeaders.indexOf('HoraCierre') + 1,
+        sesionHeaders.indexOf('UsuarioCierreEmail') + 1,
+        sesionHeaders.indexOf('TotalVentas') + 1,
+        sesionHeaders.indexOf('TotalEfectivoCalculado') + 1,
+        sesionHeaders.indexOf('MontoCierreReal') + 1,
+        sesionHeaders.indexOf('Diferencia') + 1,
+        sesionHeaders.indexOf('Notas') + 1
+      ];
+      
+      // Actualizar todas las columnas de una vez
+      sesionesSheet.getRange(filaAActualizar, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
   }
   // --- FIN DE LA LÓGICA AÑADIDA ---
 
@@ -804,11 +837,20 @@ function actualizarEstadoVentasDeSesion(sesionID, nuevoEstado) {
     const { headers, data } = obtenerDatosHoja(SHEETS.VENTAS);
     const idx = { sesionId: headers.indexOf('SesionID'), estado: headers.indexOf('EstadoPago') };
 
+    // Optimización: Identificar todas las filas a actualizar primero
+    const filasAActualizar = [];
     data.forEach((row, index) => {
         if (row[idx.sesionId] === sesionID && row[idx.estado] === 'Pendiente') {
-            ventasSheet.getRange(index + 2, idx.estado + 1).setValue(nuevoEstado);
+            filasAActualizar.push(index + 2);
         }
     });
+
+    // Optimización: Actualizar todas las filas en una sola operación si hay múltiples
+    if (filasAActualizar.length > 0) {
+        const valoresAActualizar = filasAActualizar.map(() => [nuevoEstado]);
+        const rango = ventasSheet.getRange(filasAActualizar[0], idx.estado + 1, filasAActualizar.length, 1);
+        rango.setValues(valoresAActualizar);
+    }
 }
 
 /**
@@ -1122,13 +1164,30 @@ function gestionarProducto(productoData, accion) {
     const filaAActualizar = filaIndex + 2;
 
     if (accion.toUpperCase() === 'EDITAR') {
-        productosSheet.getRange(filaAActualizar, headers.indexOf('Nombre') + 1).setValue(productoData.Nombre);
-        productosSheet.getRange(filaAActualizar, headers.indexOf('CodigoBarras') + 1).setValue(productoData.CodigoBarras);
-        productosSheet.getRange(filaAActualizar, headers.indexOf('Categoria') + 1).setValue(productoData.Categoria);
-        productosSheet.getRange(filaAActualizar, headers.indexOf('StockMinimo') + 1).setValue(productoData.StockMinimo);
-        productosSheet.getRange(filaAActualizar, headers.indexOf('PrecioCosto') + 1).setValue(productoData.PrecioCosto);
-        productosSheet.getRange(filaAActualizar, headers.indexOf('PrecioVenta') + 1).setValue(productoData.PrecioVenta);
-        productosSheet.getRange(filaAActualizar, headers.indexOf('ImagenURL') + 1).setValue(productoData.ImagenURL);
+        // Optimización: Usar setValues para actualizar múltiples columnas de una vez
+        const valoresAActualizar = [
+            productoData.Nombre,
+            productoData.CodigoBarras,
+            productoData.Categoria,
+            productoData.StockMinimo,
+            productoData.PrecioCosto,
+            productoData.PrecioVenta,
+            productoData.ImagenURL
+        ];
+        
+        const columnasAActualizar = [
+            headers.indexOf('Nombre') + 1,
+            headers.indexOf('CodigoBarras') + 1,
+            headers.indexOf('Categoria') + 1,
+            headers.indexOf('StockMinimo') + 1,
+            headers.indexOf('PrecioCosto') + 1,
+            headers.indexOf('PrecioVenta') + 1,
+            headers.indexOf('ImagenURL') + 1
+        ];
+        
+        // Actualizar todas las columnas en una sola operación
+        productosSheet.getRange(filaAActualizar, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
+        
         return { status: 'ok', message: 'Producto actualizado correctamente.' };
     } else if (accion.toUpperCase() === 'DESACTIVAR') {
         productosSheet.getRange(filaAActualizar, headers.indexOf('Estado') + 1).setValue('Inactivo');
@@ -1177,17 +1236,27 @@ function registrarMovimientoInventario(movimiento) {
   
   const stockActual = Number(data[productoIndex][idx.stock]);
   const nuevoStock = stockActual + movimiento.cantidad;
+  
+  // Optimización: Actualizar stock en una sola operación
   productosSheet.getRange(productoIndex + 2, idx.stock + 1).setValue(nuevoStock);
 
   const ahora = new Date();
   const productoNombre = data[productoIndex][idx.nombre];
   const movimientoID = `MOV-${Utilities.formatDate(ahora, TIMEZONE, "yyyyMMddHHmmss")}-${Utilities.getUuid().substring(0, 5)}`;
   
-  movimientosSheet.appendRow([
-    movimientoID, Utilities.formatDate(ahora, TIMEZONE, "yyyy-MM-dd HH:mm:ss"),
-    movimiento.sku, productoNombre, movimiento.tipo, movimiento.cantidad,
-    movimiento.emailUsuario, movimiento.notas || ''
-  ]);
+  // Optimización: Usar setValues para agregar el movimiento en una sola operación
+  const nuevoMovimiento = [
+    movimientoID, 
+    Utilities.formatDate(ahora, TIMEZONE, "yyyy-MM-dd HH:mm:ss"),
+    movimiento.sku, 
+    productoNombre, 
+    movimiento.tipo, 
+    movimiento.cantidad,
+    movimiento.emailUsuario, 
+    movimiento.notas || ''
+  ];
+  
+  movimientosSheet.getRange(movimientosSheet.getLastRow() + 1, 1, 1, nuevoMovimiento.length).setValues([nuevoMovimiento]);
   
   return "Movimiento registrado y stock actualizado.";
 }
@@ -1736,9 +1805,17 @@ function actualizarEstadoDeuda(deudaID) {
   const nuevoEstado = (nuevoSaldo <= 0.01) ? 'Pagada' : 'Pendiente';
 
   const filaAActualizar = filaIndex + 2;
-  deudasSheet.getRange(filaAActualizar, idxDeuda.pagado + 1).setValue(totalPagado);
-  deudasSheet.getRange(filaAActualizar, idxDeuda.saldo + 1).setValue(nuevoSaldo);
-  deudasSheet.getRange(filaAActualizar, idxDeuda.estado + 1).setValue(nuevoEstado);
+  
+  // Optimización: Actualizar múltiples columnas en una sola operación usando setValues
+  const valoresAActualizar = [totalPagado, nuevoSaldo, nuevoEstado];
+  const columnasAActualizar = [
+    idxDeuda.pagado + 1,
+    idxDeuda.saldo + 1, 
+    idxDeuda.estado + 1
+  ];
+  
+  // Actualizar todas las columnas de una vez
+  deudasSheet.getRange(filaAActualizar, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
 }
 
 /**

@@ -163,8 +163,12 @@ function procesarResetPassword(token, newPassword) {
     const { hash, salt } = hashPassword(newPassword);
     const sheet = SPREADSHEET.getSheetByName(SHEETS.EMPLEADOS);
     const fila = filaIndex + 2;
-    sheet.getRange(fila, idx.password + 1).setValue(hash);
-    sheet.getRange(fila, idx.salt + 1).setValue(salt);
+    
+    // Optimización: Actualizar hash y salt en una sola operación
+    const valoresAActualizar = [hash, salt];
+    const columnasAActualizar = [idx.password + 1, idx.salt + 1];
+    sheet.getRange(fila, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
+    
     props.deleteProperty(`reset_token_${token}`);
     registrarLog('RESET_PASSWORD_EXITOSO', tokenData.email, 'Contraseña restablecida');
     return { message: 'Contraseña restablecida con éxito.' };
@@ -311,13 +315,25 @@ function gestionarEmpleado(empleadoData, accion) {
         }
 
         const fila = filaIndex + 2;
-        sheet.getRange(fila, headers.indexOf('Nombre') + 1).setValue(empleadoData.nombre);
-        sheet.getRange(fila, headers.indexOf('Rol') + 1).setValue(empleadoData.rol);
+        
+        // Optimización: Preparar valores para actualización por lotes
+        const valoresAActualizar = [empleadoData.nombre, empleadoData.rol];
+        const columnasAActualizar = [
+          headers.indexOf('Nombre') + 1,
+          headers.indexOf('Rol') + 1
+        ];
+        
         if (empleadoData.password) {
           const { hash, salt } = hashPassword(empleadoData.password);
-          sheet.getRange(fila, headers.indexOf('PasswordHash') + 1).setValue(hash);
-          sheet.getRange(fila, headers.indexOf('Salt') + 1).setValue(salt);
+          valoresAActualizar.push(hash, salt);
+          columnasAActualizar.push(
+            headers.indexOf('PasswordHash') + 1,
+            headers.indexOf('Salt') + 1
+          );
         }
+        
+        // Optimización: Actualizar todas las columnas en una sola operación
+        sheet.getRange(fila, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
         registrarLog('EDITAR_EMPLEADO_EXITOSO', empleadoData.email, `Empleado editado: ${empleadoData.empleadoId}`);
         return { status: 'ok', message: 'Empleado actualizado correctamente.' };
       }

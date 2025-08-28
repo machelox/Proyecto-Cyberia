@@ -80,13 +80,30 @@ function gestionarProducto(productoData, accion) {
   const filaAActualizar = filaIndex + 2;
 
   if (accion.toUpperCase() === 'EDITAR') {
-    productosSheet.getRange(filaAActualizar, headers.indexOf('Nombre') + 1).setValue(productoData.Nombre);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('CodigoBarras') + 1).setValue(productoData.CodigoBarras);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('Categoria') + 1).setValue(productoData.Categoria);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('StockMinimo') + 1).setValue(productoData.StockMinimo);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('PrecioCosto') + 1).setValue(productoData.PrecioCosto);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('PrecioVenta') + 1).setValue(productoData.PrecioVenta);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('ImagenURL') + 1).setValue(productoData.ImagenURL);
+    // Optimización: Usar setValues para actualizar múltiples columnas de una vez
+    const valoresAActualizar = [
+      productoData.Nombre,
+      productoData.CodigoBarras,
+      productoData.Categoria,
+      productoData.StockMinimo,
+      productoData.PrecioCosto,
+      productoData.PrecioVenta,
+      productoData.ImagenURL
+    ];
+    
+    const columnasAActualizar = [
+      headers.indexOf('Nombre') + 1,
+      headers.indexOf('CodigoBarras') + 1,
+      headers.indexOf('Categoria') + 1,
+      headers.indexOf('StockMinimo') + 1,
+      headers.indexOf('PrecioCosto') + 1,
+      headers.indexOf('PrecioVenta') + 1,
+      headers.indexOf('ImagenURL') + 1
+    ];
+    
+    // Actualizar todas las columnas en una sola operación
+    productosSheet.getRange(filaAActualizar, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
+    
     return { status: 'ok', message: 'Producto actualizado correctamente.' };
   } else if (accion.toUpperCase() === 'DESACTIVAR') {
     productosSheet.getRange(filaAActualizar, headers.indexOf('Estado') + 1).setValue('Inactivo');
@@ -121,17 +138,27 @@ function registrarMovimientoInventario(movimiento) {
   
   const stockActual = Number(data[productoIndex][idx.stock]);
   const nuevoStock = stockActual + movimiento.cantidad;
+  
+  // Optimización: Actualizar stock en una sola operación
   productosSheet.getRange(productoIndex + 2, idx.stock + 1).setValue(nuevoStock);
 
   const ahora = new Date();
   const productoNombre = data[productoIndex][idx.nombre];
   const movimientoID = `MOV-${Utilities.formatDate(ahora, TIMEZONE, "yyyyMMddHHmmss")}-${Utilities.getUuid().substring(0, 5)}`;
   
-  movimientosSheet.appendRow([
-    movimientoID, Utilities.formatDate(ahora, TIMEZONE, "yyyy-MM-dd HH:mm:ss"),
-    movimiento.sku, productoNombre, movimiento.tipo, movimiento.cantidad,
-    movimiento.emailUsuario, movimiento.notas || ''
-  ]);
+  // Optimización: Usar setValues para agregar el movimiento en una sola operación
+  const nuevoMovimiento = [
+    movimientoID, 
+    Utilities.formatDate(ahora, TIMEZONE, "yyyy-MM-dd HH:mm:ss"),
+    movimiento.sku, 
+    productoNombre, 
+    movimiento.tipo, 
+    movimiento.cantidad,
+    movimiento.emailUsuario, 
+    movimiento.notas || ''
+  ];
+  
+  movimientosSheet.getRange(movimientosSheet.getLastRow() + 1, 1, 1, nuevoMovimiento.length).setValues([nuevoMovimiento]);
   
   return "Movimiento registrado y stock actualizado.";
 }

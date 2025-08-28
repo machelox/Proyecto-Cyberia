@@ -141,15 +141,33 @@ function finalizarCierreCaja(datosCierre) {
       const filaAActualizar = filaIndex + 2;
       const horaCierre = Utilities.formatDate(ahora, TIMEZONE, "HH:mm:ss");
 
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('Estado') + 1).setValue('Cerrada');
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('FechaCierre') + 1).setValue(fechaCierre);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('HoraCierre') + 1).setValue(horaCierre);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('UsuarioCierreEmail') + 1).setValue(emailUsuario);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('TotalVentas') + 1).setValue(totalVentasApp);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('TotalEfectivoCalculado') + 1).setValue(efectivoEsperado);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('MontoCierreReal') + 1).setValue(montoReal);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('Diferencia') + 1).setValue(diferencia);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('Notas') + 1).setValue(notas || '');
+      // Optimización: Actualizar múltiples columnas en una sola operación usando setValues
+      const valoresAActualizar = [
+        'Cerrada',
+        fechaCierre,
+        horaCierre,
+        emailUsuario,
+        totalVentasApp,
+        efectivoEsperado,
+        montoReal,
+        diferencia,
+        notas || ''
+      ];
+      
+      const columnasAActualizar = [
+        sesionHeaders.indexOf('Estado') + 1,
+        sesionHeaders.indexOf('FechaCierre') + 1,
+        sesionHeaders.indexOf('HoraCierre') + 1,
+        sesionHeaders.indexOf('UsuarioCierreEmail') + 1,
+        sesionHeaders.indexOf('TotalVentas') + 1,
+        sesionHeaders.indexOf('TotalEfectivoCalculado') + 1,
+        sesionHeaders.indexOf('MontoCierreReal') + 1,
+        sesionHeaders.indexOf('Diferencia') + 1,
+        sesionHeaders.indexOf('Notas') + 1
+      ];
+      
+      // Actualizar todas las columnas de una vez
+      sesionesSheet.getRange(filaAActualizar, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
   }
 
   return { ...resumen, montoCyberplanet, efectivoEsperado, montoReal, diferencia };

@@ -87,11 +87,20 @@ function actualizarEstadoVentasDeSesion(sesionID, nuevoEstado) {
   const { headers, data } = obtenerDatosHoja(SHEETS.VENTAS);
   const idx = { sesionId: headers.indexOf('SesionID'), estado: headers.indexOf('EstadoPago') };
 
+  // Optimización: Identificar todas las filas a actualizar primero
+  const filasAActualizar = [];
   data.forEach((row, index) => {
     if (row[idx.sesionId] === sesionID && row[idx.estado] === 'Pendiente') {
-      ventasSheet.getRange(index + 2, idx.estado + 1).setValue(nuevoEstado);
+      filasAActualizar.push(index + 2);
     }
   });
+
+  // Optimización: Actualizar todas las filas en una sola operación si hay múltiples
+  if (filasAActualizar.length > 0) {
+    const valoresAActualizar = filasAActualizar.map(() => [nuevoEstado]);
+    const rango = ventasSheet.getRange(filasAActualizar[0], idx.estado + 1, filasAActualizar.length, 1);
+    rango.setValues(valoresAActualizar);
+  }
 }
 
 function gestionarOrdenVenta(ventaID, accion) {
