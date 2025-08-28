@@ -151,9 +151,11 @@ function actualizarEstadoDeuda(deudaID) {
   const nuevoSaldo = montoOriginal - totalPagado;
   const nuevoEstado = (nuevoSaldo <= 0.01) ? 'Pagada' : 'Pendiente';
 
-  const filaAActualizar = filaIndex + 2;
-  deudasSheet.getRange(filaAActualizar, idxDeuda.pagado + 1).setValue(totalPagado);
-  deudasSheet.getRange(filaAActualizar, idxDeuda.saldo + 1).setValue(nuevoSaldo);
-  deudasSheet.getRange(filaAActualizar, idxDeuda.estado + 1).setValue(nuevoEstado);
+  // Optimización: preparar una sola escritura con setValues usando la fila completa
+  const row = deudasData[filaIndex].slice();
+  row[idxDeuda.pagado] = totalPagado;
+  row[idxDeuda.saldo] = nuevoSaldo;
+  row[idxDeuda.estado] = nuevoEstado;
+  deudasSheet.getRange(filaIndex + 2, 1, 1, deudasHeaders.length).setValues([row]);
 }
 

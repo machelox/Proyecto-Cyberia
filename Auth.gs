@@ -163,8 +163,11 @@ function procesarResetPassword(token, newPassword) {
     const { hash, salt } = hashPassword(newPassword);
     const sheet = SPREADSHEET.getSheetByName(SHEETS.EMPLEADOS);
     const fila = filaIndex + 2;
-    sheet.getRange(fila, idx.password + 1).setValue(hash);
-    sheet.getRange(fila, idx.salt + 1).setValue(salt);
+    // Optimización: leer fila, modificar columnas y escribir con setValues una sola vez
+    const row = sheet.getRange(fila, 1, 1, headers.length).getValues()[0];
+    row[idx.password] = hash;
+    row[idx.salt] = salt;
+    sheet.getRange(fila, 1, 1, headers.length).setValues([row]);
     props.deleteProperty(`reset_token_${token}`);
     registrarLog('RESET_PASSWORD_EXITOSO', tokenData.email, 'Contraseña restablecida');
     return { message: 'Contraseña restablecida con éxito.' };
@@ -311,13 +314,16 @@ function gestionarEmpleado(empleadoData, accion) {
         }
 
         const fila = filaIndex + 2;
-        sheet.getRange(fila, headers.indexOf('Nombre') + 1).setValue(empleadoData.nombre);
-        sheet.getRange(fila, headers.indexOf('Rol') + 1).setValue(empleadoData.rol);
+        // Optimización: modificar la fila completa y escribir con setValues
+        const row = sheet.getRange(fila, 1, 1, headers.length).getValues()[0];
+        row[headers.indexOf('Nombre')] = empleadoData.nombre;
+        row[headers.indexOf('Rol')] = empleadoData.rol;
         if (empleadoData.password) {
           const { hash, salt } = hashPassword(empleadoData.password);
-          sheet.getRange(fila, headers.indexOf('PasswordHash') + 1).setValue(hash);
-          sheet.getRange(fila, headers.indexOf('Salt') + 1).setValue(salt);
+          row[headers.indexOf('PasswordHash')] = hash;
+          row[headers.indexOf('Salt')] = salt;
         }
+        sheet.getRange(fila, 1, 1, headers.length).setValues([row]);
         registrarLog('EDITAR_EMPLEADO_EXITOSO', empleadoData.email, `Empleado editado: ${empleadoData.empleadoId}`);
         return { status: 'ok', message: 'Empleado actualizado correctamente.' };
       }
@@ -331,7 +337,10 @@ function gestionarEmpleado(empleadoData, accion) {
         }
 
         const fila = filaIndex + 2;
-        sheet.getRange(fila, headers.indexOf('Estado') + 1).setValue('Inactivo');
+        // Optimización: actualizar el estado en una sola escritura de fila
+        const row = sheet.getRange(fila, 1, 1, headers.length).getValues()[0];
+        row[headers.indexOf('Estado')] = 'Inactivo';
+        sheet.getRange(fila, 1, 1, headers.length).setValues([row]);
         registrarLog('DESACTIVAR_EMPLEADO_EXITOSO', empleadoData.email, `Empleado desactivado: ${empleadoData.empleadoId}`);
         return { status: 'ok', message: 'Empleado desactivado correctamente.' };
       }

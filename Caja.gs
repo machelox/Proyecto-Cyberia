@@ -141,15 +141,18 @@ function finalizarCierreCaja(datosCierre) {
       const filaAActualizar = filaIndex + 2;
       const horaCierre = Utilities.formatDate(ahora, TIMEZONE, "HH:mm:ss");
 
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('Estado') + 1).setValue('Cerrada');
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('FechaCierre') + 1).setValue(fechaCierre);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('HoraCierre') + 1).setValue(horaCierre);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('UsuarioCierreEmail') + 1).setValue(emailUsuario);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('TotalVentas') + 1).setValue(totalVentasApp);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('TotalEfectivoCalculado') + 1).setValue(efectivoEsperado);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('MontoCierreReal') + 1).setValue(montoReal);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('Diferencia') + 1).setValue(diferencia);
-      sesionesSheet.getRange(filaAActualizar, sesionHeaders.indexOf('Notas') + 1).setValue(notas || '');
+      // Optimización: actualizar la fila completa en un solo setValues
+      const row = sesionData[filaIndex].slice();
+      row[sesionHeaders.indexOf('Estado')] = 'Cerrada';
+      row[sesionHeaders.indexOf('FechaCierre')] = fechaCierre;
+      row[sesionHeaders.indexOf('HoraCierre')] = horaCierre;
+      row[sesionHeaders.indexOf('UsuarioCierreEmail')] = emailUsuario;
+      row[sesionHeaders.indexOf('TotalVentas')] = totalVentasApp;
+      row[sesionHeaders.indexOf('TotalEfectivoCalculado')] = efectivoEsperado;
+      row[sesionHeaders.indexOf('MontoCierreReal')] = montoReal;
+      row[sesionHeaders.indexOf('Diferencia')] = diferencia;
+      row[sesionHeaders.indexOf('Notas')] = notas || '';
+      sesionesSheet.getRange(filaAActualizar, 1, 1, sesionHeaders.length).setValues([row]);
   }
 
   return { ...resumen, montoCyberplanet, efectivoEsperado, montoReal, diferencia };

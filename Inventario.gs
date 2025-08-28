@@ -78,18 +78,23 @@ function gestionarProducto(productoData, accion) {
   }
 
   const filaAActualizar = filaIndex + 2;
+  const row = data[filaIndex].slice();
 
   if (accion.toUpperCase() === 'EDITAR') {
-    productosSheet.getRange(filaAActualizar, headers.indexOf('Nombre') + 1).setValue(productoData.Nombre);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('CodigoBarras') + 1).setValue(productoData.CodigoBarras);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('Categoria') + 1).setValue(productoData.Categoria);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('StockMinimo') + 1).setValue(productoData.StockMinimo);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('PrecioCosto') + 1).setValue(productoData.PrecioCosto);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('PrecioVenta') + 1).setValue(productoData.PrecioVenta);
-    productosSheet.getRange(filaAActualizar, headers.indexOf('ImagenURL') + 1).setValue(productoData.ImagenURL);
+    // Optimización: actualizar la fila completa en una sola llamada setValues
+    row[headers.indexOf('Nombre')] = productoData.Nombre;
+    row[headers.indexOf('CodigoBarras')] = productoData.CodigoBarras;
+    row[headers.indexOf('Categoria')] = productoData.Categoria;
+    row[headers.indexOf('StockMinimo')] = productoData.StockMinimo;
+    row[headers.indexOf('PrecioCosto')] = productoData.PrecioCosto;
+    row[headers.indexOf('PrecioVenta')] = productoData.PrecioVenta;
+    row[headers.indexOf('ImagenURL')] = productoData.ImagenURL;
+    productosSheet.getRange(filaAActualizar, 1, 1, headers.length).setValues([row]);
     return { status: 'ok', message: 'Producto actualizado correctamente.' };
   } else if (accion.toUpperCase() === 'DESACTIVAR') {
-    productosSheet.getRange(filaAActualizar, headers.indexOf('Estado') + 1).setValue('Inactivo');
+    // Optimización: un único setValues para la fila
+    row[headers.indexOf('Estado')] = 'Inactivo';
+    productosSheet.getRange(filaAActualizar, 1, 1, headers.length).setValues([row]);
     return { status: 'ok', message: 'Producto desactivado.' };
   } else {
     throw new Error('Acción no reconocida para gestionar producto.');
@@ -121,6 +126,7 @@ function registrarMovimientoInventario(movimiento) {
   
   const stockActual = Number(data[productoIndex][idx.stock]);
   const nuevoStock = stockActual + movimiento.cantidad;
+  // Mantener llamadas mínimas: actualizar stock (1 write) y registrar movimiento (1 append)
   productosSheet.getRange(productoIndex + 2, idx.stock + 1).setValue(nuevoStock);
 
   const ahora = new Date();

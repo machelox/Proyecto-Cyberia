@@ -87,11 +87,17 @@ function actualizarEstadoVentasDeSesion(sesionID, nuevoEstado) {
   const { headers, data } = obtenerDatosHoja(SHEETS.VENTAS);
   const idx = { sesionId: headers.indexOf('SesionID'), estado: headers.indexOf('EstadoPago') };
 
-  data.forEach((row, index) => {
+  // Optimización: construir las filas actualizadas y aplicar setValues por lote
+  const updatedData = data.map((row) => {
     if (row[idx.sesionId] === sesionID && row[idx.estado] === 'Pendiente') {
-      ventasSheet.getRange(index + 2, idx.estado + 1).setValue(nuevoEstado);
+      const copy = row.slice();
+      copy[idx.estado] = nuevoEstado;
+      return copy;
     }
+    return row;
   });
+
+  ventasSheet.getRange(2, 1, updatedData.length, headers.length).setValues(updatedData);
 }
 
 function gestionarOrdenVenta(ventaID, accion) {
