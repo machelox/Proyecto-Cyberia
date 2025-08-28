@@ -245,3 +245,136 @@ function registrarNuevoCliente(cliente) {
   return cliente;
 }
 
+/**
+ * Gestiona la devolución de productos de una venta específica
+ * @param {string} ventaID - ID de la venta
+ * @param {string} sku - SKU del producto a devolver
+ * @param {number} cantidad - Cantidad a devolver
+ * @param {Object} opciones - Opciones adicionales (devolverDinero, montoDevolucion, sesionID, usuarioEmail)
+ * @returns {Object} Resultado de la operación
+ */
+function gestionarDevolucion(ventaID, sku, cantidad, opciones = {}) {
+  try {
+    const { devolverDinero = false, montoDevolucion = 0, sesionID = '', usuarioEmail = 'SISTEMA' } = opciones;
+    
+    // 1. Buscar el detalle de venta en SALES_DETAILS
+    const { headers: detalleHeaders, data: detalleData } = obtenerDatosHoja(SHEETS.SALES_DETAILS);
+    const idxDetalle = {
+      ventaId: detalleHeaders.indexOf('VentaID'),
+      sku: detalleHeaders.indexOf('SKU'),
+      cantidad: detalleHeaders.indexOf('Cantidad'),
+      precio: detalleHeaders.indexOf('PrecioUnitario'),
+      nombre: detalleHeaders.indexOf('ProductoNombre')
+    };
+    
+    const detalleVenta = detalleData.find(row => 
+      row[idxDetalle.ventaId] === ventaID && row[idxDetalle.sku] === sku
+    );
+    
+    if (!detalleVenta) {
+      throw new Error(`No se encontró el detalle de venta para VentaID: ${ventaID}, SKU: ${sku}`);
+    }
+    
+    const cantidadOriginal = Number(detalleVenta[idxDetalle.cantidad]);
+    const cantidadADevolver = Math.min(cantidad, cantidadOriginal);
+    
+    if (cantidadADevolver <= 0) {
+      throw new Error('La cantidad a devolver debe ser mayor a 0');
+    }
+    
+    // 2. Registrar el aumento de stock en MovimientosInventario con tipo 'DEVOLUCION'
+    const movimientoInventario = {
+      sku: sku,
+      tipo: 'DEVOLUCION',
+      cantidad: cantidadADevolver,
+      notas: `Devolución de ${cantidadADevolver} unidades de venta ${ventaID}`,
+      emailUsuario: usuarioEmail
+    };
+    
+    registrarMovimientoInventario(movimientoInventario);
+    
+    // 3. Si se devuelve dinero, registrar un egreso en MOVIMIENTOS_CAJA
+    if (devolverDinero && montoDevolucion > 0) {
+      if (!sesionID) {
+        throw new Error('Se requiere sesionID para registrar la devolución de dinero');
+      }
+      
+      const ahora = new Date();
+      const fechaHora = Utilities.formatDate(ahora, TIMEZONE, "yyyy-MM-dd HH:mm:ss");
+      const movimientosSheet = SPREADSHEET.getSheetByName(SHEETS.MOVIMIENTOS_CAJA);
+      
+      // Optimización: Usar setValues para agregar el movimiento en una sola operación
+      const nuevoMovimiento = [
+        `MOV-DEV-${Utilities.formatDate(ahora, TIMEZONE, "yyyyMMddHHmmss")}-${Utilities.getUuid().substring(0, 5)}`,
+        sesionID,
+        fechaHora,
+        usuarioEmail,
+        'DEVOLUCION_DINERO',
+        `Devolución de dinero por producto ${detalleVenta[idxDetalle.nombre]} (Venta: ${ventaID})`,
+        -Math.abs(montoDevolucion)
+      ];
+      
+      movimientosSheet.getRange(movimientosSheet.getLastRow() + 1, 1, 1, nuevoMovimiento.length).setValues([nuevoMovimiento]);
+    }
+    
+    // 4. Actualizar el estado del producto en el detalle de la venta
+    const detalleSheet = SPREADSHEET.getSheetByName(SHEETS.SALES_DETAILS);
+    const filaDetalle = detalleData.findIndex(row => 
+      row[idxDetalle.ventaId] === ventaID && row[idxDetalle.sku] === sku
+    ) + 2; // +2 porque los datos empiezan en la fila 2 y findIndex es 0-based
+    
+    if (filaDetalle > 1) {
+      // Agregar columna de estado si no existe
+      const estadoIndex = detalleHeaders.indexOf('Estado');
+      if (estadoIndex === -1) {
+        // Si no existe la columna Estado, agregarla al final
+        const ultimaColumna = detalleSheet.getLastColumn();
+        detalleSheet.getRange(1, ultimaColumna + 1).setValue('Estado');
+        detalleSheet.getRange(filaDetalle, ultimaColumna + 1).setValue('Devuelto');
+      } else {
+        // Si existe, actualizar el estado
+        detalleSheet.getRange(filaDetalle, estadoIndex + 1).setValue('Devuelto');
+      }
+      
+      // Agregar nota de devolución
+      const notasIndex = detalleHeaders.indexOf('Notas');
+      if (notasIndex === -1) {
+        // Si no existe la columna Notas, agregarla al final
+        const ultimaColumna = detalleSheet.getLastColumn();
+        detalleSheet.getRange(1, ultimaColumna + 1).setValue('Notas');
+        const nota = `Devuelto ${cantidadADevolver} unidades el ${Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd HH:mm:ss")}`;
+        detalleSheet.getRange(filaDetalle, ultimaColumna + 1).setValue(nota);
+      } else {
+        // Si existe, actualizar las notas
+        const notaActual = detalleSheet.getRange(filaDetalle, notasIndex + 1).getValue() || '';
+        const nuevaNota = notaActual + (notaActual ? '; ' : '') + 
+          `Devuelto ${cantidadADevolver} unidades el ${Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd HH:mm:ss")}`;
+        detalleSheet.getRange(filaDetalle, notasIndex + 1).setValue(nuevaNota);
+      }
+    }
+    
+    // 5. Manejar errores y devolver mensaje de éxito
+    const mensaje = `Devolución exitosa: ${cantidadADevolver} unidades del producto ${detalleVenta[idxDetalle.nombre]} (SKU: ${sku})`;
+    const mensajeDinero = devolverDinero ? ` Se devolvió S/ ${montoDevolucion.toFixed(2)}.` : '';
+    
+    return {
+      status: 'ok',
+      message: mensaje + mensajeDinero,
+      datos: {
+        ventaID: ventaID,
+        sku: sku,
+        cantidadDevuelta: cantidadADevolver,
+        montoDevuelto: devolverDinero ? montoDevolucion : 0,
+        producto: detalleVenta[idxDetalle.nombre]
+      }
+    };
+    
+  } catch (error) {
+    return {
+      status: 'error',
+      message: `Error al procesar la devolución: ${error.message}`,
+      error: error.toString()
+    };
+  }
+}
+
