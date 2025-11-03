@@ -171,3 +171,4 @@ function configurarEmailAdministrador(email) {
     throw error;
   }
 }
+
