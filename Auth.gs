@@ -13,13 +13,13 @@ function iniciarSesion(email, password) {
 
   if (lockoutUntil > now) {
     const minutosRestantes = Math.ceil((lockoutUntil - now) / 60000);
-    registrarLog('LOGIN_BLOQUEADO', email, `Cuenta bloqueada por ${minutosRestantes} minutos`);
+    registrarLog('LOGIN_BLOQUEADO', `Cuenta bloqueada por ${minutosRestantes} minutos`, email);
     throw new Error(`Cuenta bloqueada. Intenta de nuevo en ${minutosRestantes} minutos.`);
   }
 
   const { headers, data: empleados } = obtenerDatosHoja(SHEETS.EMPLEADOS);
   if (!empleados.length) {
-    registrarLog('LOGIN_FALLIDO', email, 'Hoja de empleados vacía');
+    registrarLog('LOGIN_FALLIDO', 'Hoja de empleados vacía', email);
     throw new Error('No hay empleados registrados.');
   }
 
@@ -41,10 +41,10 @@ function iniciarSesion(email, password) {
     props.setProperty(intentosKey, (intentos + 1).toString());
     if (intentos + 1 >= LOGIN_ATTEMPTS_LIMIT) {
       props.setProperty(lockoutKey, (now + LOGIN_LOCKOUT_MINUTES * 60 * 1000).toString());
-      registrarLog('LOGIN_BLOQUEADO', email, 'Excedió intentos de login');
+      registrarLog('LOGIN_BLOQUEADO', 'Excedió intentos de login', email);
       throw new Error(`Demasiados intentos fallidos. Cuenta bloqueada por ${LOGIN_LOCKOUT_MINUTES} minutos.`);
     }
-    registrarLog('LOGIN_FALLIDO', email, 'Usuario no encontrado o inactivo');
+    registrarLog('LOGIN_FALLIDO', 'Usuario no encontrado o inactivo', email);
     throw new Error('Credenciales inválidas.');
   }
 
@@ -53,10 +53,10 @@ function iniciarSesion(email, password) {
     props.setProperty(intentosKey, (intentos + 1).toString());
     if (intentos + 1 >= LOGIN_ATTEMPTS_LIMIT) {
       props.setProperty(lockoutKey, (now + LOGIN_LOCKOUT_MINUTES * 60 * 1000).toString());
-      registrarLog('LOGIN_BLOQUEADO', email, 'Excedió intentos de login');
+      registrarLog('LOGIN_BLOQUEADO', 'Excedió intentos de login', email);
       throw new Error(`Demasiados intentos fallidos. Cuenta bloqueada por ${LOGIN_LOCKOUT_MINUTES} minutos.`);
     }
-    registrarLog('LOGIN_FALLIDO', email, 'Contraseña incorrecta');
+    registrarLog('LOGIN_FALLIDO', 'Contraseña incorrecta', email);
     throw new Error('Credenciales inválidas.');
   }
 
@@ -84,11 +84,11 @@ function iniciarSesion(email, password) {
     });
 
   if (Object.keys(permisos).length === 0) {
-    registrarLog('LOGIN_FALLIDO', email, `Rol ${rolUsuario} sin permisos definidos`);
+    registrarLog('LOGIN_FALLIDO', `Rol ${rolUsuario} sin permisos definidos`, email);
     throw new Error('El rol asignado no tiene permisos definidos.');
   }
 
-  registrarLog('LOGIN_EXITOSO', email, `Usuario inició sesión`);
+  registrarLog('LOGIN_EXITOSO', `Usuario inició sesión`, email);
   return {
     empleadoId: usuarioEncontrado[idx.id],
     nombre: usuarioEncontrado[idx.nombre],
@@ -103,7 +103,7 @@ function enviarResetPassword(email) {
   const idx = { email: headers.indexOf('Email'), id: headers.indexOf('EmpleadoID') };
   const usuario = data.find(row => row[idx.email] === email);
   if (!usuario) {
-    registrarLog('RESET_PASSWORD_FALLIDO', email, 'Usuario no encontrado');
+    registrarLog('RESET_PASSWORD_FALLIDO', 'Usuario no encontrado', email);
     throw new Error('Email no registrado.');
   }
 
@@ -126,7 +126,7 @@ function enviarResetPassword(email) {
   `;
 
   GmailApp.sendEmail(email, subject, body);
-  registrarLog('RESET_PASSWORD_ENVIADO', email, `Enlace enviado: ${resetUrl}`);
+  registrarLog('RESET_PASSWORD_ENVIADO', `Enlace enviado: ${resetUrl}`, email);
   return { message: 'Correo de restablecimiento enviado.' };
 }
 
@@ -134,14 +134,14 @@ function procesarResetPassword(token, newPassword) {
   const props = PropertiesService.getScriptProperties();
   const tokenDataStr = props.getProperty(`reset_token_${token}`);
   if (!tokenDataStr) {
-    registrarLog('RESET_PASSWORD_FALLIDO', 'N/A', 'Token inválido');
+    registrarLog('RESET_PASSWORD_FALLIDO', 'Token inválido', 'N/A');
     throw new Error('Token inválido o expirado.');
   }
 
   const tokenData = JSON.parse(tokenDataStr);
   if (new Date().getTime() > tokenData.expires) {
     props.deleteProperty(`reset_token_${token}`);
-    registrarLog('RESET_PASSWORD_FALLIDO', tokenData.email, 'Token expirado');
+    registrarLog('RESET_PASSWORD_FALLIDO', 'Token expirado', tokenData.email);
     throw new Error('El enlace de restablecimiento ha expirado.');
   }
 
@@ -149,13 +149,13 @@ function procesarResetPassword(token, newPassword) {
   const idx = { id: headers.indexOf('EmpleadoID'), password: headers.indexOf('PasswordHash'), salt: headers.indexOf('Salt') };
   const filaIndex = data.findIndex(row => row[idx.id] === tokenData.empleadoId);
   if (filaIndex === -1) {
-    registrarLog('RESET_PASSWORD_FALLIDO', tokenData.email, 'Empleado no encontrado');
+    registrarLog('RESET_PASSWORD_FALLIDO', 'Empleado no encontrado', tokenData.email);
     throw new Error('Usuario no encontrado.');
   }
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
-    registrarLog('RESET_PASSWORD_FALLIDO', tokenData.email, 'No se pudo adquirir el lock');
+    registrarLog('RESET_PASSWORD_FALLIDO', 'No se pudo adquirir el lock', tokenData.email);
     throw new Error('El sistema está ocupado. Intenta de nuevo.');
   }
 
@@ -170,7 +170,7 @@ function procesarResetPassword(token, newPassword) {
     sheet.getRange(fila, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
     
     props.deleteProperty(`reset_token_${token}`);
-    registrarLog('RESET_PASSWORD_EXITOSO', tokenData.email, 'Contraseña restablecida');
+    registrarLog('RESET_PASSWORD_EXITOSO', 'Contraseña restablecida', tokenData.email);
     return { message: 'Contraseña restablecida con éxito.' };
   } finally {
     lock.releaseLock();
@@ -221,7 +221,7 @@ function obtenerPermisosPorRol(rol) {
 function guardarPermisos(rol, nuevosPermisos) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
-    registrarLog('GUARDAR_PERMISOS_FALLIDO', 'N/A', `No se pudo adquirir el lock para rol ${rol}`);
+    registrarLog('GUARDAR_PERMISOS_FALLIDO', `No se pudo adquirir el lock para rol ${rol}`, 'N/A');
     throw new Error('El sistema está ocupado. Intenta de nuevo.');
   }
 
@@ -252,7 +252,7 @@ function guardarPermisos(rol, nuevosPermisos) {
     });
 
     sheet.getRange(2, 1, filasActualizadas.length, headers.length).setValues(filasActualizadas);
-    registrarLog('GUARDAR_PERMISOS_EXITOSO', 'N/A', `Permisos actualizados para rol ${rol}`);
+    registrarLog('GUARDAR_PERMISOS_EXITOSO', `Permisos actualizados para rol ${rol}`, 'N/A');
     return { message: `Permisos del rol '${rol}' guardados correctamente.` };
   } finally {
     lock.releaseLock();
@@ -262,7 +262,7 @@ function guardarPermisos(rol, nuevosPermisos) {
 function gestionarEmpleado(empleadoData, accion) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) {
-    registrarLog('GESTIONAR_EMPLEADO_FALLIDO', empleadoData.email, `No se pudo adquirir el lock para acción ${accion}`);
+    registrarLog('GESTIONAR_EMPLEADO_FALLIDO', `No se pudo adquirir el lock para acción ${accion}`, empleadoData.email);
     throw new Error('El sistema está ocupado. Intenta de nuevo.');
   }
 
@@ -273,12 +273,12 @@ function gestionarEmpleado(empleadoData, accion) {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(empleadoData.email)) {
-      registrarLog('GESTIONAR_EMPLEADO_FALLIDO', empleadoData.email, 'Email inválido');
+      registrarLog('GESTIONAR_EMPLEADO_FALLIDO', 'Email inválido', empleadoData.email);
       throw new Error('Email inválido.');
     }
 
     if (accion !== 'DESACTIVAR' && !roles.includes(empleadoData.rol)) {
-      registrarLog('GESTIONAR_EMPLEADO_FALLIDO', empleadoData.email, `Rol ${empleadoData.rol} no existe`);
+      registrarLog('GESTIONAR_EMPLEADO_FALLIDO', `Rol ${empleadoData.rol} no existe`, empleadoData.email);
       throw new Error(`El rol '${empleadoData.rol}' no existe.`);
     }
 
@@ -287,7 +287,7 @@ function gestionarEmpleado(empleadoData, accion) {
         const emailIndex = headers.indexOf('Email');
         const emailExistente = data.some(row => row[emailIndex] === empleadoData.email);
         if (emailExistente) {
-          registrarLog('CREAR_EMPLEADO_FALLIDO', empleadoData.email, 'Email ya registrado');
+          registrarLog('CREAR_EMPLEADO_FALLIDO', 'Email ya registrado', empleadoData.email);
           throw new Error(`El email '${empleadoData.email}' ya está registrado.`);
         }
 
@@ -302,7 +302,7 @@ function gestionarEmpleado(empleadoData, accion) {
           salt,
           'Activo'
         ]);
-        registrarLog('CREAR_EMPLEADO_EXITOSO', empleadoData.email, `Empleado creado: ${nuevoId}`);
+        registrarLog('CREAR_EMPLEADO_EXITOSO', `Empleado creado: ${nuevoId}`, empleadoData.email);
         return { status: 'ok', message: `Empleado '${empleadoData.nombre}' creado con éxito.` };
       }
 
@@ -310,7 +310,7 @@ function gestionarEmpleado(empleadoData, accion) {
         const idIndex = headers.indexOf('EmpleadoID');
         const filaIndex = data.findIndex(row => row[idIndex] === empleadoData.empleadoId);
         if (filaIndex === -1) {
-          registrarLog('EDITAR_EMPLEADO_FALLIDO', empleadoData.email, 'Empleado no encontrado');
+          registrarLog('EDITAR_EMPLEADO_FALLIDO', 'Empleado no encontrado', empleadoData.email);
           throw new Error('No se encontró el empleado para editar.');
         }
 
@@ -334,7 +334,7 @@ function gestionarEmpleado(empleadoData, accion) {
         
         // Optimización: Actualizar todas las columnas en una sola operación
         sheet.getRange(fila, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
-        registrarLog('EDITAR_EMPLEADO_EXITOSO', empleadoData.email, `Empleado editado: ${empleadoData.empleadoId}`);
+        registrarLog('EDITAR_EMPLEADO_EXITOSO', `Empleado editado: ${empleadoData.empleadoId}`, empleadoData.email);
         return { status: 'ok', message: 'Empleado actualizado correctamente.' };
       }
 
@@ -342,18 +342,18 @@ function gestionarEmpleado(empleadoData, accion) {
         const idIndex = headers.indexOf('EmpleadoID');
         const filaIndex = data.findIndex(row => row[idIndex] === empleadoData.empleadoId);
         if (filaIndex === -1) {
-          registrarLog('DESACTIVAR_EMPLEADO_FALLIDO', empleadoData.email, 'Empleado no encontrado');
+          registrarLog('DESACTIVAR_EMPLEADO_FALLIDO', 'Empleado no encontrado', empleadoData.email);
           throw new Error('No se encontró el empleado para desactivar.');
         }
 
         const fila = filaIndex + 2;
         sheet.getRange(fila, headers.indexOf('Estado') + 1).setValue('Inactivo');
-        registrarLog('DESACTIVAR_EMPLEADO_EXITOSO', empleadoData.email, `Empleado desactivado: ${empleadoData.empleadoId}`);
+        registrarLog('DESACTIVAR_EMPLEADO_EXITOSO', `Empleado desactivado: ${empleadoData.empleadoId}`, empleadoData.email);
         return { status: 'ok', message: 'Empleado desactivado correctamente.' };
       }
 
       default:
-        registrarLog('GESTIONAR_EMPLEADO_FALLIDO', empleadoData.email, `Acción desconocida: ${accion}`);
+        registrarLog('GESTIONAR_EMPLEADO_FALLIDO', `Acción desconocida: ${accion}`, empleadoData.email);
         throw new Error('Acción no válida.');
     }
   } finally {

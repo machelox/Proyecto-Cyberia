@@ -357,7 +357,7 @@ function gestionarDevolucion(ventaID, sku, cantidad, opciones = {}) {
     const mensaje = `Devolución exitosa: ${cantidadADevolver} unidades del producto ${detalleVenta[idxDetalle.nombre]} (SKU: ${sku})`;
     const mensajeDinero = devolverDinero ? ` Se devolvió S/ ${montoDevolucion.toFixed(2)}.` : '';
     
-    return {
+    const resultado = {
       status: 'ok',
       message: mensaje + mensajeDinero,
       datos: {
@@ -369,7 +369,39 @@ function gestionarDevolucion(ventaID, sku, cantidad, opciones = {}) {
       }
     };
     
+    // Registrar log de la devolución
+    registrarLog('DEVOLUCION_PROCESADA', 
+      `Devolución: ${cantidadADevolver} unidades de ${detalleVenta[idxDetalle.nombre]}`, 
+      usuarioEmail);
+    
+    // Enviar notificación al administrador si está configurado
+    try {
+      const emailAdmin = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL');
+      if (emailAdmin) {
+        enviarNotificacionDevolucion(emailAdmin, resultado.datos);
+      }
+    } catch (notifError) {
+      registrarLog('NOTIFICACION_DEVOLUCION_FALLO', 
+        `No se pudo enviar notificación: ${notifError.message}`, 
+        usuarioEmail);
+    }
+    
+    return resultado;
+    
   } catch (error) {
+    registrarLog('DEVOLUCION_ERROR', `Error al procesar devolución: ${error.message}`, 
+      opciones.usuarioEmail || 'SISTEMA');
+    
+    // Enviar notificación de error crítico si está configurado
+    try {
+      const emailAdmin = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL');
+      if (emailAdmin) {
+        enviarNotificacionError(emailAdmin, 'Error crítico en devolución', error.message);
+      }
+    } catch (notifError) {
+      // Ignorar errores de notificación
+    }
+    
     return {
       status: 'error',
       message: `Error al procesar la devolución: ${error.message}`,

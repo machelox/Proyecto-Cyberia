@@ -270,3 +270,157 @@ function obtenerResumenProductosVendidosPorSesion(sesionID) {
   return Object.values(resumen).sort((a, b) => a.ProductoNombre.localeCompare(b.ProductoNombre));
 }
 
+/**
+ * Genera un reporte completo de ventas para un rango de fechas y lo exporta a Google Drive.
+ * @param {string} fechaInicio Fecha de inicio en formato 'YYYY-MM-DD'
+ * @param {string} fechaFin Fecha de fin en formato 'YYYY-MM-DD'
+ * @param {string} [formato='csv'] Formato de exportación: 'csv' o 'pdf'
+ * @param {string} [emailAdmin] Email del administrador para notificación (opcional)
+ * @returns {Object} Objeto con información del archivo generado y ubicación
+ */
+function generarReporteVentas(fechaInicio, fechaFin, formato = 'csv', emailAdmin = null) {
+  try {
+    registrarLog('REPORTE_VENTAS_INICIADO', `Generando reporte desde ${fechaInicio} hasta ${fechaFin}`, 'SISTEMA');
+    
+    const inicio = new Date(fechaInicio + 'T00:00:00');
+    const fin = new Date(fechaFin + 'T23:59:59');
+    
+    // Obtener datos de ventas
+    const { headers: ventasHeaders, data: ventasData } = obtenerDatosHoja(SHEETS.VENTAS);
+    const ventasDelPeriodo = ventasData.filter(row => {
+      const fechaVenta = new Date(row[ventasHeaders.indexOf('FechaHora')]);
+      return fechaVenta >= inicio && fechaVenta <= fin;
+    });
+    
+    if (ventasDelPeriodo.length === 0) {
+      registrarLog('REPORTE_VENTAS_VACIO', 'No se encontraron ventas en el período', 'SISTEMA');
+      throw new Error('No se encontraron ventas en el período especificado.');
+    }
+    
+    // Obtener detalles de ventas
+    const ventaIDs = new Set(ventasDelPeriodo.map(v => v[ventasHeaders.indexOf('VentaID')]));
+    const { headers: detallesHeaders, data: detallesData } = obtenerDatosHoja(SHEETS.SALES_DETAILS);
+    const detallesDelPeriodo = detallesData.filter(d => ventaIDs.has(d[detallesHeaders.indexOf('VentaID')]));
+    
+    // Calcular totales
+    const totalVentas = ventasDelPeriodo.reduce((sum, v) => 
+      sum + (Number(v[ventasHeaders.indexOf('TotalVenta')]) || 0), 0);
+    const totalItems = detallesDelPeriodo.reduce((sum, d) => 
+      sum + (Number(d[detallesHeaders.indexOf('Cantidad')]) || 0), 0);
+    
+    // Preparar datos del reporte
+    const reporteData = [];
+    reporteData.push(['REPORTE DE VENTAS']);
+    reporteData.push(['Período:', `${fechaInicio} al ${fechaFin}`]);
+    reporteData.push(['Fecha de generación:', Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd HH:mm:ss")]);
+    reporteData.push([]);
+    reporteData.push(['RESUMEN']);
+    reporteData.push(['Total de ventas:', ventasDelPeriodo.length]);
+    reporteData.push(['Total de items vendidos:', totalItems]);
+    reporteData.push(['Total de ingresos:', `S/ ${totalVentas.toFixed(2)}`]);
+    reporteData.push([]);
+    reporteData.push(['DETALLE DE VENTAS']);
+    
+    // Encabezados del detalle
+    const columnasVenta = ['VentaID', 'FechaHora', 'ClienteDNI', 'ClienteNombre', 'TotalVenta', 'EstadoPago'];
+    reporteData.push(columnasVenta);
+    
+    // Datos de ventas
+    ventasDelPeriodo.forEach(venta => {
+      const fila = columnasVenta.map(col => {
+        const idx = ventasHeaders.indexOf(col);
+        if (idx === -1) return '';
+        const valor = venta[idx];
+        if (col === 'FechaHora' && valor instanceof Date) {
+          return Utilities.formatDate(valor, TIMEZONE, "yyyy-MM-dd HH:mm:ss");
+        }
+        return valor;
+      });
+      reporteData.push(fila);
+    });
+    
+    reporteData.push([]);
+    reporteData.push(['DETALLE DE PRODUCTOS VENDIDOS']);
+    const columnasDetalle = ['VentaID', 'SKU', 'ProductoNombre', 'Categoria', 'Cantidad', 'PrecioUnitario', 'Subtotal'];
+    reporteData.push(columnasDetalle);
+    
+    // Datos de detalles
+    detallesDelPeriodo.forEach(detalle => {
+      const fila = columnasDetalle.map(col => {
+        const idx = detallesHeaders.indexOf(col);
+        if (idx === -1) return '';
+        return detalle[idx];
+      });
+      reporteData.push(fila);
+    });
+    
+    // Crear archivo temporal en Sheets para exportación
+    const nombreArchivo = `Reporte_Ventas_${fechaInicio}_${fechaFin}`;
+    const folder = DriveApp.getRootFolder(); // O cambiar por una carpeta específica
+    
+    let archivo;
+    
+    if (formato.toLowerCase() === 'csv') {
+      // Generar CSV
+      const csvContent = reporteData.map(row => 
+        row.map(cell => {
+          const cellStr = String(cell || '');
+          // Escapar comillas y encerrar en comillas si contiene comas o comillas
+          if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+            return `"${cellStr.replace(/"/g, '""')}"`;
+          }
+          return cellStr;
+        }).join(',')
+      ).join('\n');
+      
+      archivo = folder.createFile(nombreArchivo + '.csv', csvContent, MimeType.CSV);
+      registrarLog('REPORTE_VENTAS_EXPORTADO', `Archivo CSV creado: ${archivo.getName()}`, 'SISTEMA');
+      
+    } else if (formato.toLowerCase() === 'pdf') {
+      // Generar PDF creando una hoja temporal
+      const hojaTemp = SPREADSHEET.insertSheet(`Temp_Reporte_${Date.now()}`);
+      try {
+        hojaTemp.getRange(1, 1, reporteData.length, reporteData[0].length).setValues(reporteData);
+        hojaTemp.getRange(1, 1, 1, reporteData[0].length).setFontWeight('bold');
+        hojaTemp.setColumnWidth(1, 150);
+        hojaTemp.setColumnWidth(2, 180);
+        
+        const pdfBlob = hojaTemp.getAs('application/pdf');
+        archivo = folder.createFile(pdfBlob.setName(nombreArchivo + '.pdf'));
+        registrarLog('REPORTE_VENTAS_EXPORTADO', `Archivo PDF creado: ${archivo.getName()}`, 'SISTEMA');
+      } finally {
+        SPREADSHEET.deleteSheet(hojaTemp);
+      }
+    } else {
+      throw new Error('Formato no soportado. Use "csv" o "pdf".');
+    }
+    
+    const resultado = {
+      status: 'ok',
+      message: `Reporte generado exitosamente: ${archivo.getName()}`,
+      archivo: {
+        id: archivo.getId(),
+        nombre: archivo.getName(),
+        url: archivo.getUrl(),
+        tamaño: archivo.getSize()
+      },
+      resumen: {
+        totalVentas: ventasDelPeriodo.length,
+        totalItems: totalItems,
+        totalIngresos: totalVentas
+      }
+    };
+    
+    // Enviar notificación por correo si se proporciona email
+    if (emailAdmin) {
+      enviarNotificacionReporte(emailAdmin, resultado, fechaInicio, fechaFin);
+    }
+    
+    return resultado;
+    
+  } catch (error) {
+    registrarLog('REPORTE_VENTAS_ERROR', `Error al generar reporte: ${error.message}`, 'SISTEMA');
+    throw error;
+  }
+}
+

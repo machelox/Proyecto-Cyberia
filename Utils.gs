@@ -16,15 +16,71 @@ function obtenerDatosHoja(sheetName) {
 }
 
 /**
- * Registra una acción en la hoja de Logs para auditoría.
- * @param {string} tipoAccion Ej. 'LOGIN_FALLIDO', 'EMPLEADO_CREADO'.
- * @param {string} usuarioEmail Email del usuario que realiza la acción.
- * @param {string} detalles Detalles adicionales de la acción.
+ * Registra una acción en la hoja de Logs para auditoría y trazabilidad.
+ * Sistema centralizado de registro de logs para todas las operaciones relevantes.
+ * @param {string} accion Tipo de acción realizada (ej. 'LOGIN_FALLIDO', 'EMPLEADO_CREADO', 'VENTA_REGISTRADA', 'DEVOLUCION_PROCESADA').
+ * @param {string|Object} detalle Puede ser un string con detalles o un objeto con información estructurada.
+ * @param {string} [usuarioEmail] Email del usuario que realiza la acción (opcional, por defecto 'SISTEMA').
+ * @returns {boolean} true si el log se registró correctamente, false en caso de error.
  */
-function registrarLog(tipoAccion, usuarioEmail, detalles) {
-  const sheet = SPREADSHEET.getSheetByName(SHEETS.LOGS) || SPREADSHEET.insertSheet(SHEETS.LOGS);
-  const fechaHora = Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd HH:mm:ss");
-  sheet.appendRow([fechaHora, tipoAccion, usuarioEmail || 'N/A', detalles]);
+function registrarLog(accion, detalle, usuarioEmail = 'SISTEMA') {
+  try {
+    let sheet = SPREADSHEET.getSheetByName(SHEETS.LOGS);
+    
+    // Crear hoja de logs si no existe
+    if (!sheet) {
+      sheet = SPREADSHEET.insertSheet(SHEETS.LOGS);
+      // Crear encabezados si la hoja está vacía
+      const headers = ['FechaHora', 'Accion', 'UsuarioEmail', 'Detalle', 'Nivel'];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+    
+    // Formatear detalles (soporta string u objeto)
+    let detalleFormateado = '';
+    if (typeof detalle === 'string') {
+      detalleFormateado = detalle;
+    } else if (typeof detalle === 'object' && detalle !== null) {
+      detalleFormateado = JSON.stringify(detalle);
+    } else {
+      detalleFormateado = String(detalle);
+    }
+    
+    // Determinar nivel de log basado en el tipo de acción
+    let nivel = 'INFO';
+    if (accion.includes('ERROR') || accion.includes('FALLIDO') || accion.includes('CRITICO')) {
+      nivel = 'ERROR';
+    } else if (accion.includes('WARNING') || accion.includes('ADVERTENCIA')) {
+      nivel = 'WARNING';
+    }
+    
+    const fechaHora = Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd HH:mm:ss");
+    
+    // Optimización: Usar setValues en lugar de appendRow
+    const nuevoLog = [
+      fechaHora,
+      accion,
+      usuarioEmail || 'SISTEMA',
+      detalleFormateado,
+      nivel
+    ];
+    
+    const ultimaFila = sheet.getLastRow();
+    sheet.getRange(ultimaFila + 1, 1, 1, nuevoLog.length).setValues([nuevoLog]);
+    
+    // Limitar tamaño de logs (mantener últimos 10,000 registros)
+    const maxLogs = 10000;
+    if (ultimaFila + 1 > maxLogs) {
+      sheet.deleteRows(2, ultimaFila + 1 - maxLogs);
+    }
+    
+    return true;
+  } catch (error) {
+    // Si falla el registro de log, intentar registrar en la consola
+    Logger.log(`Error al registrar log: ${error.toString()}`);
+    return false;
+  }
 }
 
 /**
@@ -51,13 +107,13 @@ function hashPassword(password, salt = Utilities.getUuid().substring(0, 16)) {
 function obtenerRolesUnicos() {
   const { headers, data } = obtenerDatosHoja(SHEETS.PERMISOS);
   if (!headers.length) {
-    registrarLog('ROLES_ERROR', 'N/A', 'Hoja de permisos vacía o no encontrada');
+    registrarLog('ROLES_ERROR', 'Hoja de permisos vacía o no encontrada', 'N/A');
     return [];
   }
 
   const rolIndex = headers.indexOf('Rol');
   if (rolIndex === -1) {
-    registrarLog('ROLES_ERROR', 'N/A', 'Columna Rol no encontrada');
+    registrarLog('ROLES_ERROR', 'Columna Rol no encontrada', 'N/A');
     return [];
   }
 
