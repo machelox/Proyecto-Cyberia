@@ -1,0 +1,766 @@
+<script>
+  /**
+   * =================================================================
+   * MÓDULO DE INVENTARIO - CYBERIA PWA
+   * =================================================================
+   * Este módulo maneja toda la lógica relacionada con:
+   * - Gestión de productos (CRUD completo)
+   * - Control de stock
+   * - Movimientos de inventario
+   * - Filtrado y búsqueda de productos
+   * - Importación y exportación de productos
+   * - Historial de productos (Kardex)
+   */
+
+  $(document).ready(function () {
+    // ===================================================
+    // VARIABLES DEL MÓDULO DE INVENTARIO
+    // ===================================================
+    let inventarioCompleto = []; // Caché para la lista de productos
+    let tablaDT = null; // Instancia única de DataTable
+
+    // ===================================================
+    // FUNCIONES UTILITARIAS
+    // ===================================================
+
+    /**
+     * Convierte un valor a número, manejando comas y valores nulos.
+     * @param {any} v - Valor a convertir.
+     * @returns {number} Número convertido o 0.
+     */
+    const toNumber = (v) =>
+      Number(
+        String(v ?? '')
+          .toString()
+          .replace(',', '.')
+      ) || 0;
+
+    /**
+     * Formatea un número como moneda en formato PEN (S/).
+     * @param {number} n - Número a formatear.
+     * @returns {string} Número formateado como moneda.
+     */
+    const formatPEN = (n) =>
+      new Intl.NumberFormat('es-PE', {
+        style: 'currency',
+        currency: 'PEN',
+      }).format(n || 0);
+
+    /**
+     * Escapa caracteres especiales para usar en regex de DataTables.
+     * @param {string} s - String a escapar.
+     * @returns {string} String escapado.
+     */
+    const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // ===================================================
+    // FUNCIONES DE CARGA Y RENDERIZADO
+    // ===================================================
+
+    /**
+     * Carga el inventario completo desde el backend y renderiza la tabla.
+     */
+    function cargarModuloInventario() {
+      console.log('DEBUG: 1. Iniciando cargarModuloInventario()');
+      if (
+        appState.user &&
+        appState.user.permisos?.Inventario &&
+        appState.user.permisos.Inventario.Ver
+      ) {
+        console.log('DEBUG: 2. Permisos APROBADOS. Llamando a backend...');
+        google.script.run
+          .withSuccessHandler((inventario) => {
+            console.log('DEBUG: 3. Backend SUCCESS. Datos recibidos:', inventario);
+            inventarioCompleto = inventario || [];
+            renderizarTablaInventario(inventarioCompleto);
+            actualizarDashboardInventario(inventarioCompleto);
+            cargarFiltrosInventario(inventarioCompleto);
+
+            // Llenar datalist de SKUs si existe en el DOM
+            const $listaSkus = $('#listaSkus');
+            if ($listaSkus.length) {
+              $listaSkus.empty();
+              inventarioCompleto.forEach((p) =>
+                $listaSkus.append(
+                  `<option value="${p.SKU}">${p.Nombre}</option>`
+                )
+              );
+            }
+          })
+          .withFailureHandler((err) => {
+            console.error('DEBUG: 3. Backend FAILURE.', err);
+            showError('Error al cargar inventario', err?.message || String(err));
+          })
+          .obtenerInventarioCompleto();
+      } else {
+        // ESTA ES LA CAUSA MÁS PROBABLE DE LA FALLA SILENCIOSA
+        console.warn('DEBUG: 2. Permisos DENEGADOS o appState no listo. Carga abortada.');
+        console.log('DEBUG: Estado de appState.user:', appState.user);
+        console.log('DEBUG: appState.user.permisos (Objeto completo):', appState.user.permisos);
+        console.log('DEBUG: Buscando appState.user.permisos.Inventario:', appState.user.permisos?.Inventario);
+        console.log('DEBUG: Buscando appState.user.permisos.Inventario.Ver:', appState.user.permisos?.Inventario?.Ver);
+      }
+    }
+
+    /**
+     * Llena los selectores de filtro con las categorías del inventario.
+     * @param {Array<object>} inventario - El array completo de productos.
+     */
+    function cargarFiltrosInventario(inventario) {
+      // Rellenar el filtro de categorías
+      const categorias = new Set(
+        inventario.map((p) => p.Categoria).filter(Boolean)
+      );
+      const $selectCategoria = $('#filtroCategoria')
+        .empty()
+        .append('<option value="Todos">Todas</option>');
+      categorias.forEach((cat) =>
+        $selectCategoria.append(`<option value="${cat}">${cat}</option>`)
+      );
+    }
+
+    /**
+     * Renderiza la tabla de inventario usando DataTables.
+     * @param {Array<object>} inventario - El array de productos a renderizar.
+     */
+    function renderizarTablaInventario(inventario) {
+      // Usamos la tabla existente en el HTML (#tablaInventario)
+      // y la llenamos con DataTables basados en data[]
+      const dataTableData = (inventario || []).map((p) => {
+        const stock = toNumber(p.Stock);
+        const stockMin = toNumber(p.StockMinimo);
+        const precioCosto = toNumber(p.PrecioCosto);
+        const precioVenta = toNumber(p.PrecioVenta);
+        const valorStock = stock * precioCosto;
+
+        let claseFila = '';
+        const estado = String(p.Estado || '').trim();
+        if (estado === 'Activo') {
+          if (stock <= 0) claseFila = 'table-danger';
+          else if (stock <= stockMin) claseFila = 'table-warning';
+        } else {
+          claseFila = 'table-secondary';
+        }
+
+        // Array alineado a las columnas visibles + 2 auxiliares ocultas
+        return [
+          p.SKU,
+          p.Nombre,
+          p.CodigoBarras || 'N/A',
+          p.Categoria || '',
+          stock, // num para ordenar
+          stockMin, // num para ordenar
+          precioCosto, // num para ordenar
+          precioVenta, // num para ordenar
+          valorStock, // num para ordenar
+          // Acciones (HTML)
+          // Usamos una IIFE (función autoejecutable) para construir el HTML
+          // basado en los permisos del usuario logueado (appState).
+          (() => {
+            // Obtenemos los permisos de inventario (o un objeto vacío si no existen)
+            const permisos = appState.user.permisos?.Inventario || {};
+
+            let botonesHtml = '<div class="btn-group" role="group">';
+
+            // Botón Ver Historial (Requiere permiso 'Ver')
+            if (permisos.Ver) {
+              botonesHtml += `<button class="btn btn-sm btn-outline-info ver-historial-producto" title="Ver Historial (Kardex)"><i class="bi bi-list-ol"></i></button>`;
+            }
+
+            // Botón Editar (Requiere permiso 'Editar')
+            if (permisos.Editar) {
+              botonesHtml += `<button class="btn btn-sm btn-outline-primary btn-editar-producto" title="Editar Producto"><i class="bi bi-pencil-square"></i></button>`;
+            }
+
+            // Botón Desactivar (Requiere 'Eliminar' y que el producto esté Activo)
+            if (permisos.Eliminar && estado === 'Activo') {
+              botonesHtml += `<button class="btn btn-sm btn-outline-danger btn-desactivar-producto" title="Desactivar Producto"><i class="bi bi-slash-circle"></i></button>`;
+            }
+
+            botonesHtml += '</div>';
+            return botonesHtml;
+          })(),
+          p, // 10: objeto producto (oculto)
+          claseFila, // 11: clase fila (oculto)
+        ];
+      });
+
+      if (tablaDT) {
+        tablaDT.clear();
+        tablaDT.rows.add(dataTableData).draw();
+        return;
+      }
+
+      tablaDT = $('#tablaInventario').DataTable({
+        data: dataTableData,
+        language: {
+          url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json',
+        },
+        columns: [
+          { title: 'SKU' },
+          { title: 'Nombre' },
+          { title: 'Código Barras' },
+          { title: 'Categoría' },
+          // Render numéricos con formato para display pero manteniendo sort por valor
+          {
+            title: 'Stock',
+            render: (d, t) =>
+              t === 'display'
+                ? `<span class="fw-bold ${d <= 0 ? 'text-danger' : ''}">${d}</span>`
+                : d,
+          },
+          {
+            title: 'Stock Mínimo',
+            render: (d, t) => (t === 'display' ? `${d}` : d),
+          },
+          {
+            title: 'Precio Costo',
+            render: (d, t) => (t === 'display' ? `${formatPEN(d)}` : d),
+          },
+          {
+            title: 'Precio Venta',
+            render: (d, t) => (t === 'display' ? `${formatPEN(d)}` : d),
+          },
+          {
+            title: 'Valor Stock',
+            render: (d, t) => (t === 'display' ? `${formatPEN(d)}` : d),
+          },
+          { title: 'Acciones', orderable: false, searchable: false },
+          { visible: false, searchable: false }, // objeto producto
+          { visible: false, searchable: false }, // clase fila
+        ],
+        createdRow: function (row, data) {
+          $(row).addClass(data[11]);
+          $(row).data('producto', data[10]);
+        },
+      });
+
+      // Filtro por Categoría (col 3) con match exacto, escapando regex
+      $('#filtroCategoria')
+        .off('change')
+        .on('change', function () {
+          const v = this.value;
+          if (!v || v === 'Todos') {
+            // 'Todos' también debe limpiar el filtro
+            tablaDT.column(3).search('').draw();
+          } else {
+            tablaDT
+              .column(3)
+              .search(`^${escapeRegex(v)}$`, true, false)
+              .draw();
+          }
+        });
+
+      // Filtro por Estado (custom) solo para esta tabla
+      let estadoFiltro = '';
+      let estadoFiltroRegistrado = false;
+      const filtroEstadoFn = function (settings, data, dataIndex) {
+        if (!estadoFiltro || estadoFiltro === 'Todos') return true; // 'Todos' también es sin filtro
+        // limitar al id de nuestra tabla
+        if (settings.nTable && settings.nTable.id !== 'tablaInventario')
+          return true;
+        const producto = tablaDT.row(dataIndex).data()?.[10] || {};
+        const stock = toNumber(data[4]);
+        const stockMin = toNumber(data[5]);
+        const activo = String(producto.Estado || '').trim() === 'Activo';
+        if (estadoFiltro === 'BajoStock') return activo && stock <= stockMin;
+        if (estadoFiltro === 'Activo') return activo;
+        if (estadoFiltro === 'Inactivo') return !activo;
+        return true;
+      };
+
+      if (!estadoFiltroRegistrado) {
+        $.fn.dataTable.ext.search.push(filtroEstadoFn);
+        estadoFiltroRegistrado = true;
+      }
+
+      $('#filtroEstado')
+        .off('change')
+        .on('change', function () {
+          estadoFiltro = this.value || '';
+          tablaDT.draw();
+        });
+    }
+
+    /**
+     * Actualiza las tarjetas del dashboard de inventario.
+     * @param {Array<object>} inventario - El array completo de productos.
+     */
+    function actualizarDashboardInventario(inventario) {
+      const inventarioActivo = inventario.filter((p) => p.Estado === 'Activo');
+
+      const valorTotal = inventarioActivo.reduce(
+        (sum, p) => sum + Number(p.Stock) * Number(p.PrecioCosto),
+        0
+      );
+
+      const itemsBajoStock = inventarioActivo.filter(
+        (p) => Number(p.Stock) <= Number(p.StockMinimo) && Number(p.Stock) > 0
+      ).length;
+
+      const skusUnicosActivos = inventarioActivo.length;
+
+      $('#valorTotalInventario').text(formatPEN(valorTotal));
+      $('#totalSkus').text(skusUnicosActivos);
+      $('#itemsStockBajo').text(itemsBajoStock);
+    }
+
+    // ===================================================
+    // FUNCIONES DE GESTIÓN DE PRODUCTOS
+    // ===================================================
+
+    /**
+     * Abre el modal de producto para agregar o editar.
+     * @param {object|null} producto - El producto a editar, o null para crear uno nuevo.
+     */
+    function abrirModalProducto(producto = null) {
+      // Verificación de Modal
+      if (!modalProducto) {
+        if (typeof showError === 'function') {
+          showError('Error de UI', 'El modal de producto no está disponible.');
+        } else {
+          alert('Error: El modal de producto no está disponible.');
+        }
+        return;
+      }
+
+      const esEdicion = producto !== null;
+      $('#formProducto')[0].reset();
+
+      $('#modalProductoLabel').text(
+        esEdicion ? 'Editar Producto' : 'Agregar Nuevo Producto'
+      );
+      $('#prodSku').prop('disabled', esEdicion);
+
+      // Cargar categorías primero
+      google.script.run
+        .withSuccessHandler((categorias) => {
+          const select = $('#prodCategoria')
+            .empty()
+            .append('<option value="">Seleccione o cree una...</option>');
+          categorias.forEach((cat) =>
+            select.append(`<option value="${cat}">${cat}</option>`)
+          );
+
+          // Si es edición, rellenar datos después de cargar categorías
+          if (esEdicion) {
+            $('#prodSku').val(producto.SKU);
+            $('#prodNombre').val(producto.Nombre);
+            $('#prodCodigoBarras').val(producto.CodigoBarras);
+            $('#prodStock').val(producto.Stock).prop('disabled', true);
+            $('#prodStockMin').val(producto.StockMinimo);
+            $('#prodPrecioCosto').val(producto.PrecioCosto);
+            $('#prodPrecioVenta').val(producto.PrecioVenta);
+            $('#prodImagenUrl').val(producto.ImagenURL);
+            $('#prodCategoria').val(producto.Categoria); // Seleccionar la categoría
+          } else {
+            $('#prodStock').prop('disabled', false);
+          }
+        })
+        .obtenerCategoriasUnicas();
+
+      modalProducto.show();
+    }
+
+    // ===================================================
+    // EVENT HANDLERS - GESTIÓN DE PRODUCTOS
+    // ===================================================
+
+    /**
+     * Maneja el clic en el botón para ver el inventario.
+     */
+    $('#btnVerInventario').on('click', function () {
+      const panel = $('#panelInventario');
+      panel.slideToggle();
+      if (panel.is(':visible') && inventarioCompleto.length === 0) {
+        cargarModuloInventario();
+      }
+    });
+
+    /**
+     * Maneja el clic en el botón para agregar un nuevo producto.
+     */
+    $('#btnAgregarProducto').on('click', function () {
+      abrirModalProducto(null);
+    });
+
+    /**
+     * Maneja el clic en el botón para editar un producto.
+     */
+    $(document).on('click', '.btn-editar-producto', function () {
+      const producto = $(this).closest('tr').data('producto');
+      abrirModalProducto(producto);
+    });
+
+    /**
+     * Maneja el clic en el botón para desactivar un producto.
+     */
+    $(document).on('click', '.btn-desactivar-producto', function () {
+      const producto = $(this).closest('tr').data('producto');
+      Swal.fire({
+        title: '¿Desactivar Producto?',
+        text: `El producto "${producto.Nombre}" ya no aparecerá en ventas. ¿Continuar?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Sí, desactivar',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          google.script.run
+            .withSuccessHandler((res) => {
+              showToast('success', res.message);
+              cargarModuloInventario();
+            })
+            .withFailureHandler((err) => showError('Error', err.message))
+            .gestionarProducto({ SKU: producto.SKU }, 'DESACTIVAR');
+        }
+      });
+    });
+
+    /**
+     * Maneja el envío del formulario de producto (crear/editar).
+     */
+    $('#formProducto').on('submit', function (e) {
+      e.preventDefault();
+      // Verificación de Modal
+      if (!modalProducto) {
+        if (typeof showError === 'function') {
+          showError('Error de UI', 'El modal de producto no está disponible.');
+        } else {
+          alert('Error: El modal de producto no está disponible.');
+        }
+        return;
+      }
+
+      const esEdicion = $('#prodSku').is(':disabled');
+
+      const productoData = {
+        SKU: $('#prodSku').val(),
+        Nombre: $('#prodNombre').val(),
+        CodigoBarras: $('#prodCodigoBarras').val(),
+        Categoria: $('#prodCategoria').val(),
+        StockMinimo: Number($('#prodStockMin').val()),
+        PrecioCosto: Number($('#prodPrecioCosto').val()),
+        PrecioVenta: Number($('#prodPrecioVenta').val()),
+        ImagenURL: $('#prodImagenUrl').val(),
+      };
+
+      if (esEdicion) {
+        google.script.run
+          .withSuccessHandler((res) => {
+            showToast('success', res.message);
+            modalProducto.hide();
+            cargarModuloInventario();
+          })
+          .withFailureHandler((err) =>
+            showError('Error al actualizar', err.message)
+          )
+          .gestionarProducto(productoData, 'EDITAR');
+      } else {
+        productoData.Stock = Number($('#prodStock').val());
+        google.script.run
+          .withSuccessHandler((res) => {
+            showToast('success', 'Producto guardado correctamente');
+            modalProducto.hide();
+            cargarModuloInventario();
+          })
+          .withFailureHandler((err) => showError('Error al crear', err.message))
+          .agregarProductoNuevo(productoData);
+      }
+    });
+
+    /**
+     * Maneja el clic en el botón para crear una nueva categoría.
+     */
+    $('#btnNuevaCategoria').on('click', function () {
+      // Verificación de Modal
+      if (!modalProducto) {
+        if (typeof showError === 'function') {
+          showError('Error de UI', 'El modal de producto no está disponible.');
+        } else {
+          alert('Error: El modal de producto no está disponible.');
+        }
+        return;
+      }
+      modalProducto.hide();
+      Swal.fire({
+        title: 'Crear Nueva Categoría',
+        input: 'text',
+        inputPlaceholder: 'Nombre de la nueva categoría',
+        showCancelButton: true,
+        confirmButtonText: 'Crear',
+        inputValidator: (value) => !value && '¡Necesitas escribir un nombre!',
+      }).then((result) => {
+        modalProducto.show();
+        if (result.isConfirmed && result.value) {
+          const nuevaCategoria = result.value.trim();
+          $('#prodCategoria').append(
+            new Option(nuevaCategoria, nuevaCategoria, true, true)
+          );
+          showToast(
+            'success',
+            `Categoría "${nuevaCategoria}" creada y seleccionada.`
+          );
+        }
+      });
+    });
+
+    // ===================================================
+    // EVENT HANDLERS - MOVIMIENTOS DE INVENTARIO
+    // ===================================================
+
+    /**
+     * Maneja el clic en el botón para registrar un movimiento de stock.
+     */
+    $('#btnRegistrarMovimiento').on('click', function () {
+      // Verificación de Modal
+      if (!modalMovimiento) {
+        if (typeof showError === 'function') {
+          showError(
+            'Error de UI',
+            'El modal de movimiento no está disponible.'
+          );
+        } else {
+          alert('Error: El modal de movimiento no está disponible.');
+        }
+        return;
+      }
+      $('#formMovimiento')[0].reset();
+      modalMovimiento.show();
+    });
+
+    /**
+     * Maneja el envío del formulario de movimiento de stock.
+     */
+    $('#formMovimiento').on('submit', function (e) {
+      e.preventDefault();
+      // Verificación de Modal
+      if (!modalMovimiento) {
+        if (typeof showError === 'function') {
+          showError(
+            'Error de UI',
+            'El modal de movimiento no está disponible.'
+          );
+        } else {
+          alert('Error: El modal de movimiento no está disponible.');
+        }
+        return;
+      }
+
+      const movimiento = {
+        sku: $('#movSku').val(),
+        tipo: $('#movTipo').val(),
+        cantidad: Number($('#movCantidad').val()),
+        notas: $('#movNotas').val(),
+        emailUsuario: appState.user.email,
+      };
+
+      if (movimiento.cantidad <= 0) {
+        // Validar cantidad positiva
+        showError(
+          'Cantidad inválida',
+          'La cantidad debe ser un número mayor a cero.'
+        );
+        return;
+      }
+
+      // La lógica de conversión a negativo se hará en el backend o aquí, pero basado en tipo
+      if (movimiento.tipo !== 'INGRESO') {
+        // movimiento.cantidad *= -1; // Dejaremos que el backend maneje la lógica
+      }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          showToast('success', res);
+          modalMovimiento.hide();
+          cargarModuloInventario();
+        })
+        .withFailureHandler((err) => showError('Error', err.message))
+        .registrarMovimientoInventario(movimiento);
+    });
+
+    // ===================================================
+    // EVENT HANDLERS - IMPORTACIÓN Y EXPORTACIÓN
+    // ===================================================
+
+    /**
+     * Maneja el clic en el botón para importar productos.
+     */
+    $('#btnImportarProductos').on('click', function () {
+      // Verificación de Modal
+      if (!modalPrevisualizacionImportar) {
+        if (typeof showError === 'function') {
+          showError(
+            'Error de UI',
+            'El modal de importación no está disponible.'
+          );
+        } else {
+          alert('Error: El modal de importación no está disponible.');
+        }
+        return;
+      }
+
+      Swal.fire({
+        title: 'Iniciar Importación',
+        text: "Se leerá la hoja 'Importar'. ¿Deseas continuar?",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, previsualizar',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          showToast('info', 'Cargando previsualización...');
+          google.script.run
+            .withSuccessHandler((preview) => {
+              const { productosValidos, errores } = preview;
+              if (errores.length > 0)
+                $('#previewErrores')
+                  .html(
+                    '<strong>Advertencias:</strong><br>' + errores.join('<br>')
+                  )
+                  .show();
+              else $('#previewErrores').hide();
+              $('#previewValidos').text(productosValidos.length);
+              if (productosValidos.length > 0) {
+                const headers = Object.keys(productosValidos[0]);
+                $('#previewThead').html(
+                  `<tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>`
+                );
+                const tbody = $('#previewTbody').empty();
+                productosValidos.forEach((p) => {
+                  tbody.append(
+                    `<tr>${headers.map((h) => `<td>${p[h]}</td>`).join('')}</tr>`
+                  );
+                });
+                $('#btnConfirmarImportacion')
+                  .show()
+                  .data('productos', productosValidos);
+              } else {
+                $('#previewThead, #previewTbody').empty();
+                $('#btnConfirmarImportacion').hide();
+              }
+              modalPrevisualizacionImportar.show();
+            })
+            .withFailureHandler((err) => showError('Error', err.message))
+            .previsualizarImportacion();
+        }
+      });
+    });
+
+    /**
+     * Maneja el clic en el botón para confirmar la importación.
+     */
+    $(document).on('click', '#btnConfirmarImportacion', function () {
+      // Verificación de Modal
+      if (!modalPrevisualizacionImportar) {
+        if (typeof showError === 'function') {
+          showError(
+            'Error de UI',
+            'El modal de importación no está disponible.'
+          );
+        } else {
+          alert('Error: El modal de importación no está disponible.');
+        }
+        return;
+      }
+
+      const btn = $(this);
+      const productosAImportar = btn.data('productos');
+      btn
+        .prop('disabled', true)
+        .html(
+          '<span class="spinner-border spinner-border-sm"></span> Importando...'
+        );
+      google.script.run
+        .withSuccessHandler((res) => {
+          modalPrevisualizacionImportar.hide();
+          Swal.fire('¡Éxito!', res, 'success');
+          cargarModuloInventario();
+        })
+        .withFailureHandler((err) => showError('Error', err.message))
+        .always(() => btn.prop('disabled', false).text('Confirmar e Importar'))
+        .ejecutarImportacion(productosAImportar);
+    });
+
+    /**
+     * Maneja el clic en el botón para exportar el inventario a CSV.
+     */
+    $('#btnExportarInventario').on('click', function () {
+      // Primero, verificamos que el caché de inventario tenga datos
+      if (!inventarioCompleto || inventarioCompleto.length === 0) {
+        showError(
+          'Nada que exportar',
+          'El inventario está vacío. Cárgalo primero.'
+        );
+        return;
+      }
+
+      showToast('info', 'Generando archivo CSV...');
+
+      // No necesitamos enviar los datos, el backend ya los tiene.
+      google.script.run
+        .withSuccessHandler((csvContent) => {
+          // Creamos un link temporal para descargar el archivo
+          const encodedUri = encodeURI(
+            'data:text/csv;charset=utf-8,' + csvContent
+          );
+          const link = document.createElement('a');
+          link.setAttribute('href', encodedUri);
+          link.setAttribute('download', 'reporte_inventario.csv');
+          document.body.appendChild(link);
+          link.click(); // Simular clic para iniciar la descarga
+          document.body.removeChild(link); // Limpiar el link del DOM
+        })
+        .withFailureHandler((err) =>
+          showError('Error al Exportar', err.message)
+        )
+        .exportarInventarioCSV();
+    });
+
+    // ===================================================
+    // EVENT HANDLERS - HISTORIAL DE PRODUCTOS
+    // ===================================================
+
+    /**
+     * Maneja el clic en el botón para ver el historial (Kardex) de un producto.
+     */
+    $(document).on('click', '.ver-historial-producto', function () {
+      const sku = $(this).closest('tr').data('producto').SKU;
+      const nombre = $(this).closest('tr').data('producto').Nombre;
+      google.script.run
+        .withSuccessHandler((historial) => {
+          let tablaHtml =
+            '<div class="table-responsive" style="max-height: 400px;"><table class="table table-sm table-bordered"><thead><tr><th>Fecha</th><th>Tipo</th><th>Cant.</th><th>Usuario</th><th>Notas</th></tr></thead><tbody>';
+          historial.forEach((mov) => {
+            const cantClass = mov.Cantidad > 0 ? 'text-success' : 'text-danger';
+            const cantSigno = mov.Cantidad > 0 ? '+' : '';
+            tablaHtml += `<tr><td>${mov.FechaHora}</td><td>${mov.Tipo}</td><td class="${cantClass} fw-bold">${cantSigno}${mov.Cantidad}</td><td>${mov.emailusuario}</td><td>${mov.Notas}</td></tr>`;
+          });
+          tablaHtml += '</tbody></table></div>';
+          Swal.fire({
+            title: `Kardex de: ${nombre}`,
+            html: tablaHtml,
+            width: '800px',
+          });
+        })
+        .withFailureHandler((err) => showError('Error', err.message))
+        .obtenerHistorialProducto(sku);
+    });
+
+    // ===================================================
+    // INTEGRACIÓN CON NAVEGACIÓN PRINCIPAL
+    // ===================================================
+
+    /**
+     * Se ejecuta cuando se carga el panel de inventario desde el menú lateral.
+     * Esta función se llama desde el código principal de navegación.
+     */
+    function inicializarPanelInventario() {
+      cargarModuloInventario();
+    }
+
+    // Exponer funciones necesarias para el código principal
+    window.cargarModuloInventario = cargarModuloInventario;
+    window.inicializarPanelInventario = inicializarPanelInventario;
+  });
+</script>
+

@@ -1,0 +1,743 @@
+<script>
+  /**
+   * =================================================================
+   * MÓDULO DE VENTAS - CYBERIA PWA
+   * =================================================================
+   * Este módulo maneja toda la lógica relacionada con:
+   * - Punto de Venta (PDV)
+   * - Carrito de compras
+   * - Historial de ventas
+   * - Verificación de turno
+   * - Gestión de órdenes de venta
+   */
+
+  $(document).ready(function () {
+    // ===================================================
+    // VARIABLES DEL MÓDULO DE VENTAS
+    // ===================================================
+    let historialVentasCache = []; // Caché para el historial de ventas
+
+    // ===================================================
+    // FUNCIONES DE CARGA DE PRODUCTOS PARA VENTA
+    // ===================================================
+
+    /**
+     * Carga los productos activos desde el backend y los renderiza en la galería.
+     */
+    function cargarProductosParaVenta() {
+      google.script.run
+        .withSuccessHandler(function (productos) {
+          appState.productos = productos;
+
+          // Generar categorías sin usar sintaxis moderna
+          var categorias = ['Todos'];
+          productos.forEach(function (p) {
+            var cat = p.categoria || 'Varios';
+            if (categorias.indexOf(cat) === -1) {
+              categorias.push(cat);
+            }
+          });
+
+          var botonesCategorias = $('#botonesCategorias').empty();
+          categorias.forEach(function (cat) {
+            var activeClass = cat === 'Todos' ? 'active' : '';
+            botonesCategorias.append(
+              '<button type="button" class="btn btn-outline-primary btn-sm m-1 ' +
+                activeClass +
+                ' btnCategoria" data-categoria="' +
+                cat +
+                '">' +
+                cat +
+                '</button>'
+            );
+          });
+
+          renderizarGaleriaProductos('Todos');
+        })
+        .obtenerProductosActivos();
+    }
+
+    /**
+     * Renderiza la galería de productos filtrada por categoría.
+     * @param {string} categoria - La categoría a filtrar ('Todos' para mostrar todos).
+     */
+    function renderizarGaleriaProductos(categoria) {
+      const contenedor = $('#contenedorProductos').empty();
+      const productosFiltrados =
+        categoria === 'Todos'
+          ? appState.productos
+          : appState.productos.filter((p) => p.categoria === categoria);
+
+      if (productosFiltrados.length === 0) {
+        contenedor.html(
+          '<p class="text-center text-muted">No hay productos en esta categoría.</p>'
+        );
+        return;
+      }
+
+      productosFiltrados.forEach((prod) => {
+        const nombre = escapeHTML(prod.nombre);
+        const sku = escapeHTML(prod.sku);
+        const imagen = escapeHTML(
+          prod.imagen || 'https://via.placeholder.com/150'
+        );
+        const card = `
+            <div class="col-6 col-md-3 col-lg-2 mb-3">
+              <div class="card h-100 producto-item shadow-sm" style="cursor: pointer;" 
+                  data-sku="${sku}" data-nombre="${nombre}" data-precio="${Number(prod.precioVenta)}">
+                <img src="${imagen}" class="card-img-top" alt="${nombre}" style="height:120px; object-fit:cover;">
+                <div class="card-body p-2">
+                  <h6 class="card-title mb-1 small text-truncate">${nombre}</h6>
+                  <p class="fw-bold text-success mb-0">S/ ${Number(prod.precioVenta).toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          `;
+        contenedor.append(card);
+      });
+    }
+
+    // ===================================================
+    // FUNCIONES DEL CARRITO DE COMPRAS
+    // ===================================================
+
+    /**
+     * Agrega un producto al carrito de compras.
+     * @param {string} sku - El SKU del producto.
+     * @param {string} nombre - El nombre del producto.
+     * @param {number} precio - El precio del producto.
+     * @param {number} cantidad - La cantidad a agregar.
+     */
+    function agregarProductoAlCarrito(sku, nombre, precio, cantidad) {
+      const productoExistente = appState.carrito.find((p) => p.sku === sku);
+      if (productoExistente) {
+        productoExistente.cantidad += cantidad;
+      } else {
+        appState.carrito.push({
+          sku,
+          nombre,
+          precio: parseFloat(precio),
+          cantidad,
+        });
+      }
+      showToast('success', `${nombre} agregado.`);
+      renderizarTablaVenta();
+    }
+
+    /**
+     * Actualiza la cantidad de un producto en el carrito.
+     * @param {string} sku - El SKU del producto.
+     * @param {number} nuevaCantidad - La nueva cantidad.
+     */
+    function actualizarCantidadEnCarrito(sku, nuevaCantidad) {
+      const producto = appState.carrito.find((p) => p.sku === sku);
+      if (producto) {
+        producto.cantidad = nuevaCantidad;
+        renderizarTablaVenta();
+      }
+    }
+
+    /**
+     * Remueve un producto del carrito.
+     * @param {string} sku - El SKU del producto a remover.
+     */
+    function removerProductoDelCarrito(sku) {
+      appState.carrito = appState.carrito.filter((p) => p.sku !== sku);
+      renderizarTablaVenta();
+    }
+
+    /**
+     * Renderiza la tabla de productos en el carrito y calcula el total.
+     */
+    function renderizarTablaVenta() {
+      const tbody = $('#ventaItemsBody').empty();
+      let totalGeneral = 0;
+      if (appState.carrito.length === 0) {
+        tbody.html(
+          '<tr><td colspan="5" class="text-center text-muted">Agrega productos desde la galería o con el escáner.</td></tr>'
+        );
+      } else {
+        appState.carrito.forEach((item) => {
+          const nombre = escapeHTML(item.nombre);
+          const sku = escapeHTML(item.sku);
+          const precio = Number(item.precio) || 0;
+          const cantidad = Number(item.cantidad) || 0;
+          const subtotal = precio * cantidad;
+          totalGeneral += subtotal;
+          tbody.append(`
+          <tr data-sku="${sku}">
+            <td>${nombre}</td>
+            <td><input type="number" class="form-control form-control-sm cantidad-item" value="${cantidad}" min="1" style="width: 80px;"></td>
+            <td>S/ ${precio.toFixed(2)}</td>
+            <td class="fw-bold">S/ ${subtotal.toFixed(2)}</td>
+            <td><button class="btn btn-sm btn-danger quitar-item"><i class="bi bi-trash"></i></button></td>
+          </tr>`);
+        });
+      }
+      $('#totalVenta').text(`S/ ${totalGeneral.toFixed(2)}`);
+    }
+
+    /**
+     * Resetea el formulario de venta y limpia el carrito.
+     */
+    function resetearFormularioVenta() {
+      appState.carrito = [];
+      renderizarTablaVenta();
+      $('#codigoBarras').val('').focus();
+      $('#selectCliente').val('varios').trigger('change');
+      $('#selectPc').val('');
+    }
+
+    // ===================================================
+    // FUNCIONES DE HISTORIAL DE VENTAS
+    // ===================================================
+
+    /**
+     * Carga el historial de ventas desde el backend.
+     */
+    function cargarHistorialVentas() {
+      $('#historialBody').html(
+        '<tr><td colspan="7" class="text-center"><div class="spinner-border"></div></td></tr>'
+      );
+      google.script.run
+        .withSuccessHandler((historial) => {
+          historialVentasCache = historial;
+          renderizarHistorial(historialVentasCache);
+        })
+        .withFailureHandler((error) => {
+          showError(
+            'Error del Servidor',
+            'No se pudo cargar el historial. Error: ' + error.message
+          );
+          $('#historialBody').html(
+            '<tr><td colspan="7" class="text-center text-danger">Error al cargar datos.</td></tr>'
+          );
+        })
+        .obtenerHistorialVentas();
+    }
+
+    /**
+     * Renderiza el historial de ventas en la tabla y se asegura de que DataTables
+     * se reinicialice correctamente después de cada actualización de datos.
+     * @param {Array<Object>} ventas - El array de objetos de venta del servidor.
+     */
+    function renderizarHistorial(ventas) {
+      console.log("📦 [DEBUG] Datos recibidos en renderizarHistorial:", ventas);
+      if (ventas && ventas.length > 0) {
+          console.log("🔍 [DEBUG] Estructura del primer objeto venta:", ventas[0]);
+          console.log("💰 [DEBUG] Valor de totalVenta:", ventas[0].totalVenta);
+          console.log("Tipo de totalVenta:", typeof ventas[0].totalVenta);
+      }
+      // Primero, verificamos si la tabla ya es una DataTable.
+      if ($.fn.DataTable.isDataTable('#tablaHistorial')) {
+        // Si ya existe, la destruimos por completo. Esto es clave.
+        $('#tablaHistorial').DataTable().destroy();
+      }
+
+      // Ahora que la tabla está "limpia", vaciamos el tbody para prepararlo para los nuevos datos.
+      const tbody = $('#historialBody').empty();
+
+      if (!ventas || ventas.length === 0) {
+        tbody.html(
+          '<tr><td colspan="7" class="text-center text-muted">No se encontraron ventas para mostrar.</td></tr>'
+        );
+      } else {
+        // Llenamos el tbody con las nuevas filas.
+        ventas.forEach((venta) => {
+          const estado = escapeHTML(venta.EstadoPago);
+          const ventaId = escapeHTML(venta.VentaID);
+          const usuario = escapeHTML(venta.UsuarioEmail);
+          const cliente = escapeHTML(venta.ClienteNombre);
+          const estadoBadge = obtenerBadgeEstado(venta.EstadoPago);
+          const botonesAccion = generarBotonesAccion(
+            venta.EstadoPago,
+            venta.VentaID
+          );
+          const valorCrudo = venta.totalVenta ?? venta.Total ?? venta.Monto ?? 0;
+          const precioFinal = Number(valorCrudo);
+          const fila = `
+                    <tr>
+                        <td>${ventaId}</td>
+                        <td>${formatearFechaHora(venta.FechaHora)}</td>
+                        <td>${usuario}</td>
+                        <td>${cliente}</td>
+                        <td>S/ ${precioFinal.toFixed(2)}</td>
+                        <td><span class="badge ${estadoBadge}">${estado}</span></td>
+                        <td class="text-nowrap">${botonesAccion}</td>
+                    </tr>
+                `;
+          tbody.append(fila);
+        });
+      }
+
+      // Finalmente, con el HTML ya renderizado en la página, inicializamos DataTables.
+      $('#tablaHistorial').DataTable({
+        language: {
+          url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json',
+        },
+        order: [[1, 'desc']], // Ordenar por fecha descendente
+        responsive: true,
+        pageLength: 10,
+        lengthMenu: [10, 25, 50],
+      });
+    }
+
+    /**
+     * Genera los botones de acción para una venta según su estado.
+     * @param {string} estado - El estado actual de la venta.
+     * @param {string} ventaID - El ID de la venta.
+     * @returns {string} El HTML de los botones de acción.
+     */
+    function generarBotonesAccion(estado, ventaID) {
+      const btnVer = `<button class="btn btn-sm btn-info ver-detalles" data-id="${ventaID}" title="Ver Detalles"><i class="bi bi-eye"></i></button>`;
+
+      if (estado === 'Pendiente') {
+        const btnConfirmar = `<button class="btn btn-sm btn-success btn-confirmar-venta" data-id="${ventaID}" title="Confirmar Venta"><i class="bi bi-cart-check"></i></button>`;
+        const btnCancelar = `<button class="btn btn-sm btn-danger btn-cancelar-venta" data-id="${ventaID}" title="Cancelar Venta"><i class="bi bi-cart-x"></i></button>`;
+        return `${btnVer} ${btnConfirmar} ${btnCancelar}`;
+      }
+
+      return btnVer;
+    }
+
+    /**
+     * Devuelve la clase CSS de Bootstrap para el badge del estado.
+     * @param {string} estado - El estado de la venta.
+     * @returns {string} La clase CSS.
+     */
+    function obtenerBadgeEstado(estado) {
+      switch (estado) {
+        case 'Confirmado':
+        case 'Confirmada':
+          return 'bg-success';
+        case 'Cancelada':
+          return 'bg-danger';
+        case 'Pendiente':
+          return 'bg-warning text-dark';
+        // [MEJORA] Añadido el estado 'Pagada' que se usa en Ventas.gs
+        case 'Pagada':
+          return 'bg-primary';
+        default:
+          return 'bg-secondary';
+      }
+    }
+
+    /**
+     * Formatea una fecha ISO a un formato local legible.
+     * @param {string} fechaISO - La fecha en formato ISO.
+     * @returns {string} La fecha formateada.
+     */
+    function formatearFechaHora(fechaISO) {
+      if (!fechaISO) return 'N/A';
+      const fecha = new Date(fechaISO);
+      return fecha.toLocaleString('es-PE', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    }
+
+    // ===================================================
+    // EVENT HANDLERS - PUNTO DE VENTA
+    // ===================================================
+
+    /**
+     * Maneja el clic en el botón para ver el historial de ventas.
+     * Oculta el panel de ventas y muestra el panel de historial.
+     */
+    $(document).on('click', '#btnHistorialVentas', function () {
+      const panelVenta = $('#panelVentas');
+      const panelHistorial = $('#panelHistorial');
+
+      panelVenta.hide();
+      panelHistorial.fadeIn();
+
+      // Carga los datos del historial si es la primera vez que se abre
+      if (!panelHistorial.hasClass('loaded')) {
+        // Activa la primera pestaña por defecto y carga sus datos
+        $('#tabHistorialOrdenes').click();
+        cargarHistorialVentas();
+        panelHistorial.addClass('loaded');
+      }
+    });
+
+    /**
+     * Maneja el clic en el botón para volver al panel principal del Punto de Venta.
+     */
+    $(document).on('click', '#btnVolverAPDV', function () {
+      $('#panelHistorial').hide();
+      $('#panelVentas').fadeIn();
+    });
+
+    /**
+     * Maneja el clic en el botón de refresco manual del historial.
+     * Vuelve a cargar los datos desde el servidor.
+     */
+    $(document).on('click', '#btnRefrescarHistorial', function () {
+      showToast('info', 'Actualizando historial...');
+      cargarHistorialVentas(); // Llama a la función que busca los datos frescos
+    });
+
+    /**
+     * Maneja el clic en botones de categoría para filtrar productos.
+     */
+    $(document).on('click', '.btnCategoria', function () {
+      const categoria = $(this).data('categoria');
+      $('.btnCategoria').removeClass('active');
+      $(this).addClass('active');
+      renderizarGaleriaProductos(categoria);
+    });
+
+    /**
+     * Maneja el escaneo de código de barras (Enter en el input).
+     */
+    $('#codigoBarras').on('keypress', function (e) {
+      if (e.which === 13) {
+        e.preventDefault();
+        const codigo = $(this).val().trim();
+        if (codigo) {
+          google.script.run
+            .withSuccessHandler((productoEncontrado) => {
+              if (productoEncontrado) {
+                agregarProductoAlCarrito(
+                  productoEncontrado.SKU,
+                  productoEncontrado.Nombre,
+                  productoEncontrado.PrecioVenta,
+                  1
+                );
+                $(this).val('').focus();
+              } else {
+                showError(
+                  'No encontrado',
+                  'El producto no existe o no está activo.'
+                );
+              }
+            })
+            .buscarProductoPorCodigoBarras(codigo);
+        }
+      }
+    });
+
+    /**
+     * Maneja el clic en un producto de la galería para agregarlo al carrito.
+     */
+    $(document).on('click', '.producto-item', function () {
+      const card = $(this);
+      agregarProductoAlCarrito(
+        card.data('sku'),
+        card.data('nombre'),
+        card.data('precio'),
+        1
+      );
+    });
+
+    /**
+     * Maneja el cambio de cantidad en un item del carrito.
+     */
+    $(document).on('change', '.cantidad-item', function () {
+      const sku = $(this).closest('tr').data('sku');
+      const nuevaCantidad = parseInt($(this).val());
+      if (nuevaCantidad > 0) {
+        actualizarCantidadEnCarrito(sku, nuevaCantidad);
+      } else {
+        removerProductoDelCarrito(sku);
+      }
+    });
+
+    /**
+     * Maneja el clic en el botón para quitar un producto del carrito.
+     */
+    $(document).on('click', '.quitar-item', function () {
+      const sku = $(this).closest('tr').data('sku');
+      removerProductoDelCarrito(sku);
+    });
+
+    /**
+     * Maneja el clic en el botón para finalizar una venta.
+     * Valida, prepara los datos y envía la orden al backend.
+     */
+    $('#btnFinalizarVenta').off('click').on('click', function () {
+      
+      // 1. Validaciones iniciales
+      if (!appState.caja || appState.caja.Estado !== 'Abierta') {
+        showError(
+          'Caja Cerrada',
+          'Debes tener una sesión de caja abierta para registrar ventas.'
+        );
+        return;
+      }
+      
+      if (appState.carrito.length === 0) {
+        showError(
+          'Carrito Vacío',
+          'Agrega productos al carrito antes de registrar la venta.'
+        );
+        return;
+      }
+
+      // 2. Bloqueo de Botón (UX)
+      const btn = $(this);
+      // Guardamos el HTML original (icono + texto) para restaurarlo luego
+      const contenidoOriginal = '<i class="bi bi-check-circle"></i> Finalizar Venta'; 
+      
+      btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Registrando Orden...');
+
+      // 3. Preparación de Datos
+      const clienteSeleccionado = $('#selectCliente option:selected');
+      
+      // Validación extra por seguridad: asegurar que hay cliente
+      let nombreCliente = clienteSeleccionado.text();
+      if(!clienteSeleccionado.val()) {
+          // Si por alguna razón no hay cliente seleccionado, forzamos uno genérico o validamos
+          // (Depende de tu lógica, aquí asumo que siempre quieres enviar algo)
+      }
+
+      const ordenData = {
+        carrito: appState.carrito,
+        cliente: {
+          dni: clienteSeleccionado.val(),
+          nombre: nombreCliente,
+        },
+        pc: $('#selectPc').val(),
+        sesionID: appState.caja.SesionID,
+        usuarioEmail: appState.user.email,
+      };
+
+      // 4. Llamada al Backend
+      google.script.run
+        .withSuccessHandler((resultado) => {
+          Swal.fire({
+            icon: 'success',
+            title: 'Orden Registrada',
+            text: `La orden ${resultado.ventaID} por un total de S/ ${resultado.total.toFixed(2)} ha sido registrada y está pendiente de pago.`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+          
+          resetearFormularioVenta();
+          
+          // Restaurar botón
+          btn.prop('disabled', false).html(contenidoOriginal);
+        })
+        .withFailureHandler((err) => {
+          console.error("Error en venta:", err);
+          showError('Error al Registrar Orden', err.message);
+          
+          // Restaurar botón para permitir reintento
+          btn.prop('disabled', false).html(contenidoOriginal);
+        })
+        .registrarOrdenDeVenta(ordenData);
+    });
+
+    // ===================================================
+    // EVENT HANDLERS - HISTORIAL Y GESTIÓN DE VENTAS
+    // ===================================================
+
+    /**
+     * Maneja el clic en el botón para Confirmar una Venta.
+     */
+    $(document).on('click', '.btn-confirmar-venta', function () {
+      const ventaID = $(this).data('id');
+      console.log('ID de Venta a confirmar:', ventaID);
+      Swal.fire({
+        title: '¿Confirmar esta venta?',
+        text: `La venta ${ventaID} se marcará como "Confirmada". Esta acción es final y no se podrá cancelar después.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        confirmButtonText: 'Sí, ¡confirmar!',
+        cancelButtonText: 'No',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          google.script.run
+            .withSuccessHandler((res) => {
+              Swal.fire('¡Confirmada!', res, 'success');
+              cargarHistorialVentas(); // Recargar la lista para ver el cambio de estado
+            })
+            .withFailureHandler((err) => showError('Error', err.message))
+            .gestionarOrdenVenta(ventaID, 'CONFIRMAR');
+        }
+      });
+    });
+
+    /**
+     * Maneja el clic en el botón para Cancelar una Venta.
+     */
+    $(document).on('click', '.btn-cancelar-venta', function () {
+      const ventaID = $(this).data('id');
+      Swal.fire({
+        title: '¿Cancelar esta venta?',
+        text: `Se cancelará la venta ${ventaID} y el stock de los productos será devuelto. ¡Esta acción no se puede deshacer!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Sí, ¡cancelar!',
+        cancelButtonText: 'No',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          google.script.run
+            .withSuccessHandler((res) => {
+              Swal.fire('¡Cancelada!', res, 'success');
+              cargarHistorialVentas(); // Recargar la lista para ver el cambio de estado
+            })
+            .withFailureHandler((err) => showError('Error', err.message))
+            .gestionarOrdenVenta(ventaID, 'CANCELAR');
+        }
+      });
+    });
+
+    /**
+     * Maneja el clic en el botón para ver los detalles de una venta.
+     */
+    $(document).on('click', '.ver-detalles', function (e) {
+      e.preventDefault();
+      const ventaID = $(this).data('id');
+      const venta = historialVentasCache.find((v) => v.VentaID === ventaID);
+      if (venta) {
+        $('#modalDetalleVentaLabel').text(
+          `Detalles de Venta: ${venta.VentaID}`
+        );
+        $('#infoVenta').html(
+          `<p><strong>Fecha:</strong> ${formatearFechaHora(venta.FechaHora)} | <strong>Usuario:</strong> ${venta.UsuarioEmail}</p><p><strong>Cliente:</strong> ${venta.ClienteNombre}</p>`
+        );
+        const modalBody = $('#modalDetalleBody').html(
+          '<tr><td colspan="5" class="text-center"><div class="spinner-border spinner-border-sm"></div></td></tr>'
+        );
+        modalDetalleVenta.show();
+        google.script.run
+          .withSuccessHandler((detalles) => {
+            modalBody.empty();
+            if (detalles && detalles.length > 0) {
+              detalles.forEach((d) => {
+                modalBody.append(
+                  `<tr><td>${d.SKU}</td><td>${d.ProductoNombre}</td><td>${d.Cantidad}</td><td>S/ ${Number(d.PrecioUnitario).toFixed(2)}</td><td>S/ ${Number(d.Subtotal).toFixed(2)}</td></tr>`
+                );
+              });
+            } else {
+              modalBody.html(
+                '<tr><td colspan="5" class="text-center text-muted">No se encontraron productos para esta venta.</td></tr>'
+              );
+            }
+          })
+          .withFailureHandler((err) =>
+            modalBody.html(
+              '<tr><td colspan="5" class="text-center text-danger">Error al cargar detalles.</td></tr>'
+            )
+          )
+          .obtenerDetallesDeVenta(ventaID);
+      }
+    });
+
+    // ===================================================
+    // EVENT HANDLERS - VERIFICACIÓN DE TURNO
+    // ===================================================
+
+    /**
+     * Maneja el clic en la pestaña de "Verificación de Turno".
+     * Carga la lista de sesiones de caja la primera vez que se abre.
+     */
+    $(document).on('click', '#tabVerificacionTurno', function () {
+      const select = $('#selectSesionVerificacion');
+      // Solo cargar si el select está vacío para evitar recargas innecesarias
+      if (select.children().length === 0) {
+        select.html('<option>Cargando sesiones...</option>');
+        google.script.run
+          .withSuccessHandler((sesiones) => {
+            select
+              .empty()
+              .append('<option value="">-- Selecciona una sesión --</option>');
+            if (sesiones && sesiones.length > 0) {
+              // Seleccionar la sesión activa por defecto si existe
+              const sesionActivaId = appState.caja
+                ? appState.caja.SesionID
+                : null;
+              sesiones.forEach((sesion) => {
+                const option = $('<option>')
+                  .val(sesion.sesionID)
+                  .text(sesion.texto);
+                if (sesion.sesionID === sesionActivaId) {
+                  option.prop('selected', true);
+                }
+                select.append(option);
+              });
+            }
+          })
+          .withFailureHandler((err) => {
+            showError('Error', 'No se pudo cargar el historial de sesiones.');
+            select.empty().append('<option value="">Error al cargar</option>');
+          })
+          .obtenerHistorialSesiones();
+      }
+    });
+
+    /**
+     * Maneja el clic en el botón para verificar los productos vendidos en una sesión.
+     */
+    $(document).on('click', '#btnVerificarSesion', function () {
+      const sesionID = $('#selectSesionVerificacion').val();
+      if (!sesionID) {
+        showError(
+          'Selección requerida',
+          'Por favor, selecciona una sesión de caja para verificar.'
+        );
+        return;
+      }
+
+      const tbody = $('#verificacionBody').html(
+        '<tr><td colspan="4" class="text-center"><div class="spinner-border spinner-border-sm"></div> Buscando productos...</td></tr>'
+      );
+
+      google.script.run
+        .withSuccessHandler((resumen) => {
+          tbody.empty();
+          if (resumen && resumen.length > 0) {
+            resumen.forEach((producto) => {
+              const fila = `
+                          <tr>
+                              <td>${producto.SKU}</td>
+                              <td>${producto.ProductoNombre}</td>
+                              <td class="fw-bold text-center">${producto.CantidadTotal}</td>
+                              <td>S/ ${producto.VentaTotal.toFixed(2)}</td>
+                          </tr>
+                      `;
+              tbody.append(fila);
+            });
+          } else {
+            tbody.html(
+              '<tr><td colspan="4" class="text-center text-muted">No se encontraron ventas de productos en esta sesión.</td></tr>'
+            );
+          }
+        })
+        .withFailureHandler((err) => {
+          showError('Error', 'No se pudo generar el resumen de productos.');
+          tbody.html(
+            '<tr><td colspan="4" class="text-center text-danger">Error al cargar los datos.</td></tr>'
+          );
+        })
+        .obtenerResumenProductosVendidosPorSesion(sesionID);
+    });
+
+    // ===================================================
+    // INTEGRACIÓN CON NAVEGACIÓN PRINCIPAL
+    // ===================================================
+
+    /**
+     * Se ejecuta cuando se carga el panel de ventas desde el menú lateral.
+     * Esta función se llama desde el código principal de navegación.
+     */
+    function inicializarPanelVentas() {
+      if (appState.productos.length === 0) {
+        cargarProductosParaVenta();
+        cargarClientesEnSelects();
+      }
+    }
+
+    // Exponer funciones necesarias para el código principal
+    window.cargarProductosParaVenta = cargarProductosParaVenta;
+    window.inicializarPanelVentas = inicializarPanelVentas;
+  });
+</script>
+
