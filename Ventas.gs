@@ -178,23 +178,73 @@ function gestionarOrdenVenta(ventaID, accion) {
   }
 }
 
-function obtenerHistorialVentas() {
+/**
+ * Obtiene el historial de ventas.
+ * CORRECCIÓN: Maneja decimales con coma (,) y busca la columna 'Total'.
+ */
+function obtenerHistorialVentas(fechaInicio, fechaFin) {
   const { headers, data } = obtenerDatosHoja(SHEETS.VENTAS);
-  
-  const historial = data.map(ventaRow => {
-    const ventaObj = {};
-    headers.forEach((header, i) => {
-      let value = ventaRow[i];
-      if (header === 'FechaHora' && value instanceof Date) {
-        ventaObj[header] = Utilities.formatDate(value, TIMEZONE, "yyyy-MM-dd HH:mm:ss");
-      } else {
-        ventaObj[header] = value;
-      }
-    });
-    return ventaObj;
-  }).sort((a, b) => new Date(b.FechaHora) - new Date(a.FechaHora));
+  if (!headers.length || data.length === 0) return [];
 
-  return historial;
+  // 1. Buscamos la columna del dinero (Variantes posibles)
+  let colTotalIndex = headers.indexOf('Total');
+  if (colTotalIndex === -1) colTotalIndex = headers.indexOf('TotalVenta');
+  if (colTotalIndex === -1) colTotalIndex = headers.indexOf('Monto');
+
+  // Mapeamos índices
+  const idx = {
+    id: headers.indexOf('VentaID'),
+    fecha: headers.indexOf('FechaHora'),
+    usuario: headers.indexOf('UsuarioEmail'),
+    cliente: headers.indexOf('ClienteNombre'),
+    estado: headers.indexOf('EstadoPago'),
+    total: colTotalIndex 
+  };
+
+  // Filtro de fechas (opcional, si no envías fechas devuelve todo)
+  let inicio, fin;
+  if (fechaInicio && fechaFin) {
+      inicio = new Date(fechaInicio); inicio.setHours(0, 0, 0, 0);
+      fin = new Date(fechaFin); fin.setHours(23, 59, 59, 999);
+  }
+
+  const historial = data
+    .filter(row => {
+      if (!inicio || !fin) return true; // Si no hay filtro, pasa todo
+      const fechaVenta = new Date(row[idx.fecha]);
+      return fechaVenta >= inicio && fechaVenta <= fin;
+    })
+    .map(row => {
+      
+      // --- CORRECCIÓN CRÍTICA DE DECIMALES ---
+      let valorTotal = 0;
+      if (idx.total !== -1) {
+          let rawValue = row[idx.total];
+          
+          if (typeof rawValue === 'number') {
+              valorTotal = rawValue;
+          } else if (typeof rawValue === 'string') {
+              // Reemplazamos la coma por punto para que JS lo entienda
+              // Ej: "50,83" -> "50.83" -> 50.83
+              valorTotal = Number(rawValue.replace(',', '.'));
+          }
+      }
+      // Si sigue siendo NaN por alguna razón, ponemos 0
+      if (isNaN(valorTotal)) valorTotal = 0;
+      // ---------------------------------------
+
+      return {
+        VentaID: row[idx.id],
+        FechaHora: row[idx.fecha] instanceof Date ? Utilities.formatDate(row[idx.fecha], TIMEZONE, "yyyy-MM-dd HH:mm:ss") : row[idx.fecha],
+        UsuarioEmail: row[idx.usuario],
+        ClienteNombre: row[idx.cliente],
+        EstadoPago: row[idx.estado],
+        totalVenta: valorTotal // Ahora sí enviamos un número limpio
+      };
+    });
+
+  // Ordenar por fecha descendente
+  return historial.sort((a, b) => new Date(b.FechaHora) - new Date(a.FechaHora));
 }
 
 function obtenerDetallesDeVenta(ventaID) {
@@ -410,3 +460,45 @@ function gestionarDevolucion(ventaID, sku, cantidad, opciones = {}) {
   }
 }
 
+function TEST_DEBUG_VENTAS() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Ventas"); // Asegura el nombre exacto
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  
+  Logger.log("=== 1. ENCABEZADOS ENCONTRADOS ===");
+  Logger.log(headers);
+  
+  // Busquemos dónde cree el script que está el Total
+  const idxTotal = headers.indexOf("Total");
+  const idxTotalVenta = headers.indexOf("TotalVenta");
+  const idxMonto = headers.indexOf("Monto");
+  
+  Logger.log(`=== 2. INDICES DETECTADOS ===`);
+  Logger.log(`Index 'Total': ${idxTotal}`);
+  Logger.log(`Index 'TotalVenta': ${idxTotalVenta}`);
+  Logger.log(`Index 'Monto': ${idxMonto}`);
+
+  if (idxTotal === -1 && idxTotalVenta === -1 && idxMonto === -1) {
+    Logger.log("❌ ERROR CRÍTICO: No se encontró ninguna columna de dinero.");
+    return;
+  }
+
+  // Leemos la primera fila de datos (Fila 2) para ver el valor crudo
+  const primeraFila = sheet.getRange(2, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const columnaDinero = idxTotal !== -1 ? idxTotal : (idxTotalVenta !== -1 ? idxTotalVenta : idxMonto);
+  
+  const valorCrudo = primeraFila[columnaDinero];
+  
+  Logger.log("=== 3. ANÁLISIS DE VALOR ===");
+  Logger.log(`Valor crudo en celda: "${valorCrudo}"`);
+  Logger.log(`Tipo de dato: ${typeof valorCrudo}`);
+  
+  // Simulamos la conversión
+  let valorConvertido = 0;
+  if (typeof valorCrudo === 'string') {
+     valorConvertido = Number(valorCrudo.replace(',', '.'));
+     Logger.log(`Conversión STRING -> NUMBER (Reemplazo coma): ${valorConvertido}`);
+  } else {
+     valorConvertido = Number(valorCrudo);
+     Logger.log(`Conversión DIRECTA: ${valorConvertido}`);
+  }
+}
