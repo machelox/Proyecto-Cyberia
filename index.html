@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 
-  <?!= include('css'); ?>
+  <?!= include('style'); ?>
 </head>
 
 <body>
@@ -399,55 +399,235 @@
           </div>
         </div>
         <!-- RESTO DE PANELES (Inventario, Deudas, etc. sin cambios) -->
-        <div class="content-panel" id="panelPagos" style="display: none;"></div>
-        <div class="content-panel" id="panelDeudas" style="display: none;">
-          <div id="panelGestionDeudas" class="card p-3 mb-4" style="display:none;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="mb-0"><i class="bi bi-person-exclamation"></i> Gestión de Deudas</h5>
+        <!-- =================================================================
+              PANEL PAGOS – NUEVO MÓDULO COMPLETO
+            ================================================================== -->
+        <div class="content-panel" id="panelPagos" style="display: none;">
+          <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+              <h5 class="mb-0"><i class="bi bi-paypal me-2"></i> Registro y Verificación de Pagos</h5>
               <div>
-                <button id="btnAnadirDeuda" class="btn btn-success"><i class="bi bi-plus-circle"></i> Añadir Nueva Deuda</button>
-                <button id="btnRefrescarDeudas" class="btn btn-sm btn-outline-secondary" title="Actualizar datos"><i class="bi bi-arrow-clockwise"></i></button>
-                <button type="button" class="btn-close" id="btnClosePanelDeudas"></button>
+                <button id="btnRefrescarPagos" class="btn btn-light btn-sm">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
               </div>
             </div>
-            <ul class="nav nav-tabs mb-3">
-              <li class="nav-item">
-                <a class="nav-link active" id="tabDeudasPendientes" href="#">1. Deudas Pendientes</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" id="tabHistorialDeudas" href="#">2. Historial de Deudas Creadas</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" id="tabHistorialPagosDeuda" href="#">3. Historial de Pagos de Deuda</a>
-              </li>
-            </ul>
-            <div id="contenidoPanelDeudas">
-              <div class="input-group mb-3" style="max-width: 400px;">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="filtroDeudas" class="form-control" placeholder="Buscar por Cliente o DNI...">
+
+            <div class="card-body">
+
+              <ul class="nav nav-tabs mb-3">
+                <li class="nav-item">
+                  <button class="nav-link active" id="tabPagoAuto" data-bs-toggle="tab" data-bs-target="#contenidoPagoAuto">
+                    1. Pago Automático (Gmail)
+                  </button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link" id="tabPagoManual" data-bs-toggle="tab" data-bs-target="#contenidoPagoManual">
+                    2. Registrar Pago Manual
+                  </button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link" id="tabHistorialPagos" data-bs-toggle="tab" data-bs-target="#contenidoHistorialPagos">
+                    3. Historial de Pagos
+                  </button>
+                </li>
+              </ul>
+
+              <div class="tab-content">
+
+                <!-- ========================================================= -->
+                <!-- TAB 1: PAGO AUTOMÁTICO                                   -->
+                <!-- ========================================================= -->
+                <div class="tab-pane fade show active" id="contenidoPagoAuto">
+
+                  <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    Este módulo detecta automáticamente vouchers enviados a tu Gmail  
+                    para pagos mayores o iguales a <strong>S/ 10</strong>.
+                  </div>
+
+                  <div class="mb-3">
+                    <button id="btnEscanearPagosGmail" class="btn btn-primary">
+                      <i class="bi bi-search"></i> Escanear Bandeja Gmail
+                    </button>
+                  </div>
+
+                  <div id="resultadoScanGmail" class="border rounded p-3 bg-light" style="min-height: 120px;">
+                    <p class="text-muted mb-0">Aquí aparecerán los pagos detectados automáticamente…</p>
+                  </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- TAB 2: REGISTRO MANUAL                                   -->
+                <!-- ========================================================= -->
+                <div class="tab-pane fade" id="contenidoPagoManual">
+                  <h5 class="mb-3"><i class="bi bi-cash-coin me-2"></i>Registrar Pago Manual</h5>
+                  
+                  <form id="formPagoManual" class="border rounded p-3">
+                    <div class="row g-3">
+                      
+                      <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="pmFecha" class="form-control" required>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Cliente</label>
+                        <select class="form-select" id="pmCliente">
+                          <option value="" selected disabled>Cargando...</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Monto (S/)</label>
+                        <input type="number" step="0.10" min="0" id="pmMonto" class="form-control" required>
+                      </div>
+
+                      <div class="col-md-4">
+                        <label class="form-label">Método</label>
+                        <select class="form-select" id="pmMetodo">
+                          <option value="YAPE">YAPE</option>
+                          <option value="PLIN">PLIN</option>
+                          <option value="EFECTIVO">EFECTIVO</option>
+                          <option value="Tarjeta Interbank">Tarjeta Interbank</option>
+                          <option value="BBVA">BBVA</option>
+                          <option value="BCP">BCP</option>
+                          <option value="Scotiabank">Scotiabank</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Código Operación (Único)</label>
+                        <input type="text" id="pmCodigo" class="form-control" placeholder="Ej: 1234567">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Referencia</label>
+                        <input type="text" id="pmReferencia" class="form-control" placeholder="Ej: Pago de servicio">
+                      </div>
+
+                      <div class="col-md-12">
+                        <label class="form-label">Nota (Opcional)</label>
+                        <input type="text" id="pmNota" class="form-control" placeholder="Detalles adicionales...">
+                      </div>
+                      
+                      <div class="col-12 mt-3">
+                        <button class="btn btn-success w-100 btn-lg" type="submit">
+                          <i class="bi bi-save me-2"></i>Registrar Pago
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- TAB 3: HISTORIAL DE PAGOS                                -->
+                <!-- ========================================================= -->
+                <div class="tab-pane fade" id="contenidoHistorialPagos">
+                  <h5 class="mb-3"><i class="bi bi-journal-text me-2"></i>Historial de Pagos</h5>
+
+                  <div class="table-responsive">
+                    <table class="table table-hover" id="tablaHistorialPagos">
+                      <thead class="table-dark">
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Cliente</th>
+                          <th>Monto</th>
+                          <th>Código</th>
+                          <th>Referencia</th>
+                          <th>Método</th>
+                          <th>Tipo</th>
+                          <th>Nota</th>
+                          <th>Registrado Por</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+
+                </div>
               </div>
+
+            </div>
+          </div>
+        </div>
+        <div class="content-panel" id="panelDeudas" style="display: none;">
+          <div class="card shadow-sm mb-3" id="panelGestionDeudas">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+              
+              <h5 class="mb-0">
+                <i class="bi bi-collection me-2"></i>Gestión de Deudas
+              </h5>
+              
+              <div>
+                <button class="btn btn-success btn-sm" id="btnAnadirDeuda">
+                  <i class="bi bi-plus-circle me-1"></i>Añadir Nueva Deuda
+                </button>
+
+                <button class="btn btn-primary btn-sm" id="btnRefrescarDeudas" title="Refrescar datos">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+                
+                <!-- <button class="btn btn-danger btn-sm" id="btnClosePanelDeudas" title="Cerrar panel">
+                  <i class="bi bi-x-lg"></i>
+                </button> -->
+              </div>
+            </div>
+            
+            <div class="card-body" style="min-height: 250px;">
+              <ul class="nav nav-tabs mb-3">
+                <li class="nav-item">
+                  <a class="nav-link active" href="#" id="tabDeudasPendientes">1. Deudas Pendientes (Consolidado)</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="#" id="tabHistorialDeudas">2. Historial de Deudas Creadas</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="#" id="tabHistorialPagosDeuda">3. Historial de Pagos de Deuda</a>
+                </li>
+              </ul>
+              
+              <div id="contenidoPanelDeudas">
+                </div>
+            </div>
+          </div>
+        </div>
+        <div class="content-panel" id="panelGastos" style="display: none;">
+          <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+              <h5 class="mb-0"><i class="bi bi-graph-down-arrow me-2"></i>Gestión de Gastos y Salidas</h5>
+              <div>
+                <button class="btn btn-light btn-sm text-danger fw-bold me-2" data-bs-toggle="modal" data-bs-target="#modalRegistrarEgreso" id="btnRegistrarEgreso">
+                  <i class="bi bi-plus-circle-fill me-1"></i>Registrar Gasto
+                </button>
+                <button class="btn btn-outline-light btn-sm" onclick="cargarHistorialEgresos()" title="Actualizar lista">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="card-body">
+              <div class="alert alert-light border mb-3 d-flex align-items-center">
+                <i class="bi bi-info-circle-fill text-muted me-2"></i>
+                <small class="text-muted">Aquí se registran todas las salidas de dinero (compras, pagos de servicios, retiros) que afectan el cierre de caja actual.</small>
+              </div>
+
               <div class="table-responsive">
-                <table class="table table-sm table-hover" id="tablaDeudasPendientes">
-                  <thead class="table-dark">
+                <table class="table table-hover table-striped align-middle">
+                  <thead class="table-light">
                     <tr>
-                      <th>Cliente</th>
-                      <th>Monto Original</th>
-                      <th>Saldo Pendiente</th>
-                      <th>Fecha Creación</th>
-                      <th>Vencimiento</th>
-                      <th>Notas</th>
-                      <th>Acciones</th>
+                      <th>Hora</th>
+                      <th>Tipo</th>
+                      <th>Descripción</th>
+                      <th>Monto</th>
+                      <th>ID Referencia</th>
                     </tr>
                   </thead>
-                  <tbody id="deudasBody">
-                    <tr><td colspan="7" class="text-center">Cargando...</td></tr>
+                  <tbody id="tablaEgresosBody">
+                    <tr><td colspan="5" class="text-center text-muted">Cargando datos...</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
         </div>
-        <div class="content-panel" id="panelGastos" style="display: none;"></div>
         <div class="content-panel" id="panelReportes" style="display: none;" data-role="employee" data-perm="reportes">
           <h5 class="text-info"><i class="bi bi-bar-chart"></i> Módulo de Reportes</h5>
           <div class="mb-3">
@@ -765,28 +945,49 @@
       </div>
     </div>
   </div>
-  <div class="modal fade" id="modalRegistrarEgreso" tabindex="-1">
+  <div class="modal fade" id="modalRegistrarEgreso" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Registrar Gasto o Egreso</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="bi bi-wallet2 me-2"></i>Registrar Salida de Dinero</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+        
         <div class="modal-body">
           <form id="formRegistrarEgreso">
+            
             <div class="mb-3">
-              <label class="form-label">Tipo de Egreso</label><select id="egresoTipo" class="form-select" required><option value="GASTO_OPERATIVO">Gasto Operativo</option><option value="DESCUENTO">Descuento</option><option value="RETIRO">Retiro de Efectivo</option></select>
+              <label for="egresoTipo" class="form-label fw-bold">Tipo de Egreso</label>
+              <select id="egresoTipo" class="form-select" required>
+                <option value="" selected disabled>Seleccione el tipo...</option>
+                <option value="GASTO_GENERAL">Gasto General (Pasajes, Limpieza, Comida)</option>
+                <option value="COMPRA_MERCADERIA">Compra de Mercadería (Stock)</option>
+                <option value="PAGO_SERVICIO">Pago de Servicio (Luz, Agua, Internet)</option>
+                <option value="RETIRO_EFECTIVO">Retiro de Efectivo (Caja/Dueño)</option>
+                <option value="OTRO">Otro</option>
+              </select>
             </div>
-            <div class="mb-3"><label class="form-label">Monto</label>
-              <div class="input-group"><span class="input-group-text">S/</span><input type="number" id="egresoMonto" class="form-control" placeholder="0.00" step="0.10" required>
+
+            <div class="mb-3">
+              <label for="egresoMonto" class="form-label fw-bold">Monto (S/)</label>
+              <div class="input-group">
+                <span class="input-group-text">S/</span>
+                <input type="number" id="egresoMonto" class="form-control" placeholder="0.00" step="0.10" min="0.10" required>
               </div>
             </div>
-            <div class="mb-3"><label class="form-label">Descripción</label><input type="text" id="egresoDescripcion" class="form-control" placeholder="Ej: Compra de gaseosas" required>
+
+            <div class="mb-3">
+              <label for="egresoDescripcion" class="form-label">Descripción / Detalle</label>
+              <textarea id="egresoDescripcion" class="form-control" rows="2" placeholder="Ej: Compra de 2 packs de gaseosa..." required></textarea>
             </div>
+
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-danger btn-lg">
+                <i class="bi bi-save-fill me-2"></i>Guardar Salida
+              </button>
+            </div>
+
           </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="formRegistrarEgreso" class="btn btn-primary">Guardar Egreso</button>
         </div>
       </div>
     </div>
@@ -804,7 +1005,7 @@
   <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js">
   </script>
 
-  <?!= include('js'); ?>
+  <?!= include('javascript'); ?>
 
 </body>
 
