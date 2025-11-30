@@ -1,176 +1,172 @@
 /**
- * Módulo: Flujo de Caja (Sesiones y Cierre)
+ * Módulo: Flujo de Caja (CEREBRO CONTABLE MEJORADO)
  * Depende de: Constants.gs, Utils.gs
  */
 
 function obtenerEstadoCajaActual() {
   const { headers, data } = obtenerDatosHoja(SHEETS.SESIONES_CAJA);
   if (!headers.length || data.length === 0) return null;
-
   const estadoIndex = headers.indexOf('Estado');
-  const sesionAbiertaRow = data.find(row => row[estadoIndex] === 'Abierta');
-
+  const sesionAbiertaRow = data.reverse().find(row => row[estadoIndex] === 'Abierta');
   if (sesionAbiertaRow) {
     const sesionAbiertaObj = {};
     headers.forEach((header, i) => {
       const value = sesionAbiertaRow[i];
-      if (value instanceof Date) {
-        sesionAbiertaObj[header] = Utilities.formatDate(value, TIMEZONE, "yyyy-MM-dd");
-      } else {
-        sesionAbiertaObj[header] = value;
-      }
+      sesionAbiertaObj[header] = value instanceof Date ? Utilities.formatDate(value, TIMEZONE, "yyyy-MM-dd") : value;
     });
     return sesionAbiertaObj;
   }
-
   return null;
 }
 
 function iniciarNuevaSesion(montoApertura, emailUsuario) {
   const sesionActual = obtenerEstadoCajaActual();
-  if (sesionActual) {
-    throw new Error("Ya existe una sesión de caja abierta. Ciérrala antes de iniciar una nueva.");
-  }
+  if (sesionActual) throw new Error("Ya existe una sesión abierta.");
 
   const sesionesSheet = SPREADSHEET.getSheetByName(SHEETS.SESIONES_CAJA);
   const ahora = new Date();
+  const sesionID = `CAJA-${Utilities.formatDate(ahora, TIMEZONE, "yyyyMMdd-HHmm")}`;
   
-  const sesionID = `CAJA-${Utilities.formatDate(ahora, TIMEZONE, "yyyyMMdd")}-${sesionesSheet.getLastRow() + 1}`;
-  const fecha = Utilities.formatDate(ahora, TIMEZONE, "yyyy-MM-dd");
-  const hora = Utilities.formatDate(ahora, TIMEZONE, "HH:mm:ss");
-
   const nuevaSesion = {
-    SesionID: sesionID,
-    Estado: "Abierta",
-    FechaApertura: fecha,
-    HoraApertura: hora,
-    UsuarioAperturaEmail: emailUsuario,
-    MontoApertura: montoApertura,
-    FechaCierre: '',
-    HoraCierre: '',
-    UsuarioCierreEmail: '',
-    TotalVentas: '',
-    TotalEfectivoCalculado: '',
-    MontoCierreReal: '',
-    Diferencia: '',
-    Notas: ''
+    SesionID: sesionID, Estado: "Abierta", FechaApertura: Utilities.formatDate(ahora, TIMEZONE, "yyyy-MM-dd"),
+    HoraApertura: Utilities.formatDate(ahora, TIMEZONE, "HH:mm:ss"), UsuarioAperturaEmail: emailUsuario,
+    MontoApertura: Number(montoApertura), FechaCierre: '', HoraCierre: '', UsuarioCierreEmail: '',
+    TotalVentas: 0, TotalEfectivoCalculado: 0, MontoCierreReal: 0, Diferencia: 0, Notas: ''
   };
 
   const headers = sesionesSheet.getRange(1, 1, 1, sesionesSheet.getLastColumn()).getValues()[0];
-  const nuevaFila = headers.map(header => nuevaSesion[header] !== undefined ? nuevaSesion[header] : '');
-  
-  sesionesSheet.appendRow(nuevaFila);
-
+  sesionesSheet.appendRow(headers.map(h => nuevaSesion[h] !== undefined ? nuevaSesion[h] : ''));
   return nuevaSesion;
 }
 
+/**
+ * LÓGICA DE CIERRE (CORREGIDA v4)
+ * 1. Soluciona el error de nombres (totalVentasYapePlin -> ventasDigitales)
+ * 2. Soluciona la suma de ventas buscando variantes de nombre de columna.
+ */
 function obtenerResumenParaCierre(sesionID) {
   const { data: movData, headers: movHeaders } = obtenerDatosHoja(SHEETS.MOVIMIENTOS_CAJA);
-  const { data: ventasData, headers: ventasHeaders } = obtenerDatosHoja(SHEETS.VENTAS);
-  const { data: deudasData, headers: deudasHeaders } = obtenerDatosHoja(SHEETS.DEUDAS_CLIENTES);
-  const { data: detalleVentasData, headers: detalleVentasHeaders } = obtenerDatosHoja(SHEETS.SALES_DETAILS);
-
   const movSesion = movData.filter(row => row[movHeaders.indexOf('SesionID')] === sesionID);
-  const ventasSesion = ventasData.filter(row => row[ventasHeaders.indexOf('SesionID')] === sesionID);
   
-  let totalPagosDeudaEfectivo = 0, totalVentasYapePlin = 0, totalGastos = 0;
+  let cobrosDeudaEfectivo = 0;
+  let ventasDigitales = 0; 
+  let pagosDeudaDigitales = 0;
+  let totalGastos = 0;
 
   movSesion.forEach(mov => {
     const tipo = mov[movHeaders.indexOf('TipoMovimiento')];
     const monto = Number(mov[movHeaders.indexOf('Monto')]) || 0;
     
-    if (tipo === 'PAGO_DEUDA_EFECTIVO') totalPagosDeudaEfectivo += monto;
-    if (tipo === 'PAGO_DEUDA_YAPE_PLIN' || tipo === 'VENTA_YAPE_PLIN' || tipo === 'PAGO_CLIENTE_YAPE_PLIN') totalVentasYapePlin += monto;
+    if (tipo === 'PAGO_DEUDA_EFECTIVO') cobrosDeudaEfectivo += monto;
+    if (tipo === 'VENTA_YAPE_PLIN' || tipo === 'PAGO_CLIENTE_YAPE_PLIN') ventasDigitales += monto;
+    if (tipo === 'PAGO_DEUDA_YAPE_PLIN') pagosDeudaDigitales += monto;
     
-    if (monto < 0 && tipo !== 'CREDITO_OTORGADO') {
-        totalGastos += monto;
-    }
+    // Sumamos gastos (valores negativos)
+    if (monto < 0 && tipo !== 'CREDITO_OTORGADO') totalGastos += Math.abs(monto);
   });
 
+  // --- DEUDAS NUEVAS ---
+  const { data: deudasData, headers: deudasHeaders } = obtenerDatosHoja(SHEETS.DEUDAS_CLIENTES);
   const totalDeudasNuevas = deudasData
     .filter(row => row[deudasHeaders.indexOf('SesionID_Origen')] === sesionID)
     .reduce((sum, row) => sum + (Number(row[deudasHeaders.indexOf('MontoOriginal')]) || 0), 0);
   
-  const ventaIDsDeSesion = new Set(ventasSesion.map(v => v[ventasHeaders.indexOf('VentaID')]));
-  const qProductosVendidos = detalleVentasData
-    .filter(detalle => ventaIDsDeSesion.has(detalle[detalleVentasHeaders.indexOf('VentaID')]))
-    .reduce((sum, detalle) => sum + (Number(detalle[detalleVentasHeaders.indexOf('Cantidad')]) || 0), 0);
+  // --- VENTAS APP (CORRECCIÓN: BUSCAR COLUMNA 'Total') ---
+  const { data: ventasData, headers: ventasHeaders } = obtenerDatosHoja(SHEETS.VENTAS);
+  const ventasSesion = ventasData.filter(row => row[ventasHeaders.indexOf('SesionID')] === sesionID);
+  
+  // Buscamos explícitamente 'Total' (o variantes comunes por seguridad)
+  let colIndex = ventasHeaders.indexOf('Total'); 
+  if (colIndex === -1) colIndex = ventasHeaders.indexOf('TotalVenta');
+  
+  let totalVentasApp = 0;
+  if (colIndex !== -1) {
+      // Sumamos solo ventas confirmadas (opcional, según tu lógica de negocio)
+      // Si quieres sumar todas, quita el filtro de estado.
+      totalVentasApp = ventasSesion.reduce((sum, row) => sum + (Number(row[colIndex]) || 0), 0);
+  }
 
-  const totalVentasApp = ventasSesion.reduce((sum, row) => sum + (Number(row[ventasHeaders.indexOf('TotalVenta')]) || 0), 0);
+  // --- CANTIDAD PRODUCTOS ---
+  const { data: detalleData, headers: detalleHeaders } = obtenerDatosHoja(SHEETS.SALES_DETAILS);
+  const ventaIDs = new Set(ventasSesion.map(v => v[ventasHeaders.indexOf('VentaID')]));
+  let colCant = detalleHeaders.indexOf('Cantidad');
+  let qVentas = 0;
+  if (colCant !== -1) {
+      qVentas = detalleData
+        .filter(d => ventaIDs.has(d[detalleHeaders.indexOf('VentaID')]))
+        .reduce((sum, d) => sum + (Number(d[colCant]) || 0), 0);
+  }
 
   return {
     totalVentasApp,
-    qVentas: qProductosVendidos,
-    totalPagosDeudaEfectivo,
-    totalVentasYapePlin,
+    qVentas,
+    cobrosDeudaEfectivo, // Nombre clave
+    ventasDigitales,     // Nombre clave
+    pagosDeudaDigitales,  
     totalDeudasNuevas,
-    totalGastos: Math.abs(totalGastos)
+    totalGastos
   };
 }
 
 function finalizarCierreCaja(datosCierre) {
   const { sesionID, montoCyberplanet, montoReal, emailUsuario, notas } = datosCierre;
 
+  // Obtenemos los datos calculados
   const resumen = obtenerResumenParaCierre(sesionID);
-  const { totalPagosDeudaEfectivo, totalYapePlin, totalDeudasNuevas, totalGastos, totalVentasApp, qVentas } = resumen;
+  const { cobrosDeudaEfectivo, ventasDigitales, totalDeudasNuevas, totalGastos, totalVentasApp, qVentas, pagosDeudaDigitales } = resumen;
 
-  const efectivoEsperado = Number(montoCyberplanet) + totalPagosDeudaEfectivo - totalYapePlin - totalDeudasNuevas - totalGastos;
+  // --- FÓRMULA CORREGIDA ---
+  // 1. Obtenemos apertura
+  const { data: sesionData, headers: sesionHeaders } = obtenerDatosHoja(SHEETS.SESIONES_CAJA);
+  const sesionRow = sesionData.find(r => r[sesionHeaders.indexOf('SesionID')] === sesionID);
+  const montoApertura = sesionRow ? Number(sesionRow[sesionHeaders.indexOf('MontoApertura')]) : 0;
+
+  // 2. Calculamos lo que debería haber en el cajón
+  const efectivoEsperado = 
+      montoApertura + 
+      Number(montoCyberplanet) +     // Venta total reportada por sistema PC
+      cobrosDeudaEfectivo -          // (+) Dinero de deudas antiguas
+      ventasDigitales -              // (-) Ventas que no fueron efectivo (Yape)
+      totalDeudasNuevas -            // (-) Ventas que fueron fiadas
+      totalGastos;                   // (-) Salidas de dinero
+
   const diferencia = Number(montoReal) - efectivoEsperado;
+  const totalYapePlinGeneral = ventasDigitales + pagosDeudaDigitales; // Para registro histórico
 
   const ss = SPREADSHEET;
   const ahora = new Date();
-  
-  const { data: sesionData, headers: sesionHeaders } = obtenerDatosHoja(SHEETS.SESIONES_CAJA);
-  const sesionActualRow = sesionData.find(row => row[sesionHeaders.indexOf('SesionID')] === sesionID);
-  const montoApertura = Number(sesionActualRow[sesionHeaders.indexOf('MontoApertura')]) || 0;
-
-  const resumenesSheet = ss.getSheetByName(SHEETS.RESUMENES_CIERRE);
   const fechaCierre = Utilities.formatDate(ahora, TIMEZONE, "yyyy-MM-dd");
-  
-  resumenesSheet.appendRow([
+
+  // Guardar Resumen Histórico
+  ss.getSheetByName(SHEETS.RESUMENES_CIERRE).appendRow([
     sesionID, fechaCierre, emailUsuario, montoApertura, montoCyberplanet, totalVentasApp,
-    totalPagosDeudaEfectivo, totalYapePlin, totalDeudasNuevas, totalGastos,
+    cobrosDeudaEfectivo, totalYapePlinGeneral, totalDeudasNuevas, totalGastos,
     efectivoEsperado, montoReal, diferencia, qVentas
   ]);
 
-  const sesionesSheet = ss.getSheetByName(SHEETS.SESIONES_CAJA);
-  const sesionIdIndex = sesionHeaders.indexOf('SesionID');
-  const filaIndex = sesionData.findIndex(row => row[sesionIdIndex] === sesionID);
-  
+  // Cerrar Sesión
+  const filaIndex = sesionData.findIndex(row => row[sesionHeaders.indexOf('SesionID')] === sesionID);
   if (filaIndex !== -1) {
-      const filaAActualizar = filaIndex + 2;
-      const horaCierre = Utilities.formatDate(ahora, TIMEZONE, "HH:mm:ss");
-
-      // Optimización: Actualizar múltiples columnas en una sola operación usando setValues
-      const valoresAActualizar = [
-        'Cerrada',
-        fechaCierre,
-        horaCierre,
-        emailUsuario,
-        totalVentasApp,
-        efectivoEsperado,
-        montoReal,
-        diferencia,
-        notas || ''
-      ];
-      
-      const columnasAActualizar = [
-        sesionHeaders.indexOf('Estado') + 1,
-        sesionHeaders.indexOf('FechaCierre') + 1,
-        sesionHeaders.indexOf('HoraCierre') + 1,
-        sesionHeaders.indexOf('UsuarioCierreEmail') + 1,
-        sesionHeaders.indexOf('TotalVentas') + 1,
-        sesionHeaders.indexOf('TotalEfectivoCalculado') + 1,
-        sesionHeaders.indexOf('MontoCierreReal') + 1,
-        sesionHeaders.indexOf('Diferencia') + 1,
-        sesionHeaders.indexOf('Notas') + 1
-      ];
-      
-      // Actualizar todas las columnas de una vez
-      sesionesSheet.getRange(filaAActualizar, columnasAActualizar[0], 1, columnasAActualizar.length).setValues([valoresAActualizar]);
+      const filaReal = filaIndex + 2;
+      const updates = {
+          'Estado': 'Cerrada',
+          'FechaCierre': fechaCierre,
+          'HoraCierre': Utilities.formatDate(ahora, TIMEZONE, "HH:mm:ss"),
+          'UsuarioCierreEmail': emailUsuario,
+          'TotalVentas': totalVentasApp,
+          'TotalEfectivoCalculado': efectivoEsperado,
+          'MontoCierreReal': montoReal,
+          'Diferencia': diferencia,
+          'Notas': notas || ''
+      };
+      const sheet = ss.getSheetByName(SHEETS.SESIONES_CAJA);
+      Object.keys(updates).forEach(col => {
+          const idx = sesionHeaders.indexOf(col);
+          if (idx > -1) sheet.getRange(filaReal, idx + 1).setValue(updates[col]);
+      });
   }
 
-  return { ...resumen, montoCyberplanet, efectivoEsperado, montoReal, diferencia };
+  return { ...resumen, montoApertura, efectivoEsperado, montoReal, diferencia };
 }
 
 function obtenerHistorialSesiones() {
@@ -194,4 +190,3 @@ function obtenerHistorialSesiones() {
     };
   });
 }
-
