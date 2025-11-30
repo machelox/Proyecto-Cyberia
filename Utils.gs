@@ -120,4 +120,3 @@ function obtenerRolesUnicos() {
   const roles = new Set(data.map(row => row[rolIndex]).filter(Boolean));
   return Array.from(roles).sort();
 }
-
