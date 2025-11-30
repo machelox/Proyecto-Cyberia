@@ -20,6 +20,7 @@ const SHEETS = {
   PAGOS: 'Pagos',
   EGRESOS: 'Egresos',
   PAGO_DEUDAS: 'PagoDeudas',
+  PAGOS_YAPE: 'PagoYapes',
   RESUMENES_CIERRE: 'ResumenesCierre'
 };
 
@@ -27,4 +28,3 @@ const SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
 const TIMEZONE = SPREADSHEET.getSpreadsheetTimeZone();
 const LOGIN_ATTEMPTS_LIMIT = 3; // Máximo de intentos de login
 const LOGIN_LOCKOUT_MINUTES = 15; // Bloqueo temporal en minutos
-
