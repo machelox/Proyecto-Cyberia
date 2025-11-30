@@ -21,35 +21,80 @@
     };
 
     // --- Inicialización de Modales de Bootstrap ---
-    const modalAbrirCaja = new bootstrap.Modal(
-      document.getElementById('modalAbrirCaja'),
-      { backdrop: 'static', keyboard: false }
-    );
-    const modalCerrarCaja = new bootstrap.Modal(
-      document.getElementById('modalCerrarCaja')
-    );
-    const modalProducto = new bootstrap.Modal(
-      document.getElementById('modalProducto')
-    );
-    const modalMovimiento = new bootstrap.Modal(
-      document.getElementById('modalMovimiento')
-    );
-    const modalPrevisualizacionImportar = new bootstrap.Modal(
-      document.getElementById('modalPrevisualizacionImportar')
-    );
-    const modalDetalleVenta = new bootstrap.Modal(
-      document.getElementById('modalDetalleVenta')
-    );
-    const modalNuevaDeuda = new bootstrap.Modal(
-      document.getElementById('modalNuevaDeuda')
-    );
-    const modalRegistrarPago = new bootstrap.Modal(
-      document.getElementById('modalRegistrarPago')
-    );
-    const modalRegistrarEgreso = new bootstrap.Modal(
-      document.getElementById('modalRegistrarEgreso')
-    );
+    // --- Declaración de Modales (Importante: usar 'let') ---
+    let modalAbrirCaja = null,
+      modalCerrarCaja = null,
+      modalProducto = null,
+      modalMovimiento = null,
+      modalPrevisualizacionImportar = null,
+      modalDetalleVenta = null,
+      modalNuevaDeuda = null,
+      modalRegistrarPago = null,
+      modalRegistrarEgreso = null;
 
+    // --- Inicialización Segura de Modales ---
+    try {
+      // Verificamos que el elemento exista antes de crear el Modal
+
+      const elModalAbrirCaja = document.getElementById('modalAbrirCaja');
+      if (elModalAbrirCaja) {
+        modalAbrirCaja = new bootstrap.Modal(elModalAbrirCaja, {
+          backdrop: 'static',
+          keyboard: false,
+        });
+      }
+
+      const elModalCerrarCaja = document.getElementById('modalCerrarCaja');
+      if (elModalCerrarCaja) {
+        modalCerrarCaja = new bootstrap.Modal(elModalCerrarCaja);
+      }
+
+      const elModalProducto = document.getElementById('modalProducto');
+      if (elModalProducto) {
+        modalProducto = new bootstrap.Modal(elModalProducto);
+      }
+
+      const elModalMovimiento = document.getElementById('modalMovimiento');
+      if (elModalMovimiento) {
+        modalMovimiento = new bootstrap.Modal(elModalMovimiento);
+      }
+
+      const elModalPrevImportar = document.getElementById(
+        'modalPrevisualizacionImportar'
+      );
+      if (elModalPrevImportar) {
+        modalPrevisualizacionImportar = new bootstrap.Modal(
+          elModalPrevImportar
+        );
+      }
+
+      const elModalDetalleVenta = document.getElementById('modalDetalleVenta');
+      if (elModalDetalleVenta) {
+        modalDetalleVenta = new bootstrap.Modal(elModalDetalleVenta);
+      }
+
+      const elModalNuevaDeuda = document.getElementById('modalNuevaDeuda');
+      if (elModalNuevaDeuda) {
+        modalNuevaDeuda = new bootstrap.Modal(elModalNuevaDeuda);
+      }
+
+      const elModalRegistrarPago =
+        document.getElementById('modalRegistrarPago');
+      if (elModalRegistrarPago) {
+        modalRegistrarPago = new bootstrap.Modal(elModalRegistrarPago);
+      }
+
+      const elModalRegistrarEgreso = document.getElementById(
+        'modalRegistrarEgreso'
+      );
+      if (elModalRegistrarEgreso) {
+        modalRegistrarEgreso = new bootstrap.Modal(elModalRegistrarEgreso);
+      }
+    } catch (e) {
+      console.error('Error inicializando modales de Bootstrap:', e);
+      // Asumiendo que tiene una función showError
+      // showError('Error de Interfaz', 'No se pudieron cargar componentes (modales).');
+    }
     //----------------------------------------------------
     // FUNCIONES AUXILIARES (UI y HELPERS)
     //----------------------------------------------------
@@ -137,7 +182,7 @@
           url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
         },
         responsive: true,
-        pageLength: 10
+        pageLength: 10,
       });
     }
 
@@ -196,40 +241,40 @@
         Ventas: {
           Ver: '#panelVentas',
           Registrar: '#btnFinalizarVenta',
-          VerHistorial: '#btnHistorialVentas'
+          VerHistorial: '#btnHistorialVentas',
         },
         Inventario: {
           Ver: '#panelInventario',
-          Registrar: '#btnAgregarProducto, #btnImportarProductos'
+          Registrar: '#btnAgregarProducto, #btnImportarProductos',
         },
         Pagos: {
           Ver: '#panelPagos',
-          Registrar: '#btnRegistrarPago'
+          Registrar: '#btnRegistrarPago',
         },
         Deudas: {
           Ver: '#panelDeudas',
-          Registrar: '#btnNuevaDeuda'
+          Registrar: '#btnNuevaDeuda',
         },
         Gastos: {
           Ver: '#panelGastos',
-          Registrar: '#btnRegistrarEgreso'
+          Registrar: '#btnRegistrarEgreso',
         },
         Reportes: {
-          Ver: '#panelReportes'
+          Ver: '#panelReportes',
         },
         Administracion: {
           Ver: '#adminSubmenu',
           GestionarEmpleados: '#panelAdminEmpleados',
-          GestionarPermisos: '#panelAdminPermisos'
+          GestionarPermisos: '#panelAdminPermisos',
         },
         Caja: {
-          Cerrar: '#btnCerrarCaja'
-        }
+          Cerrar: '#btnCerrarCaja',
+        },
       };
 
       // Ocultar elementos no permitidos
-      Object.keys(permisosDOM).forEach(modulo => {
-        Object.keys(permisosDOM[modulo]).forEach(accion => {
+      Object.keys(permisosDOM).forEach((modulo) => {
+        Object.keys(permisosDOM[modulo]).forEach((accion) => {
           const selector = permisosDOM[modulo][accion];
           if (permisos[modulo] && permisos[modulo][accion] === false) {
             $(selector).hide();
@@ -257,8 +302,6 @@
     // 2. MÓDULO DE AUTENTICACIÓN Y UI PRINCIPAL
     //----------------------------------------------------
 
-    
-
     /**
      * Maneja el clic en el link de "Olvidé mi contraseña".
      */
@@ -277,7 +320,7 @@
             return false;
           }
           return email;
-        }
+        },
       }).then((result) => {
         if (result.isConfirmed) {
           showToast('info', 'Enviando correo de restablecimiento...');
@@ -397,46 +440,52 @@
     // NAVEGACIÓN PRINCIPAL Y CARGA DE PANELES
     //----------------------------------------------------
 
-  /**
-   * Gestiona los clics en el menú lateral para cambiar entre paneles.
-   */
-  $('#sidebar').on('click', 'a.nav-link', function (e) {
-    e.preventDefault();
+    /**
+     * Gestiona los clics en el menú lateral para cambiar entre paneles.
+     */
+    $('#sidebar').on('click', 'a.nav-link', function (e) {
+      e.preventDefault();
 
-    const targetPanelId = $(this).data('target-panel');
-    if (!targetPanelId) return;
+      const targetPanelId = $(this).data('target-panel');
+      if (!targetPanelId) return;
 
-    $('#sidebar a.nav-link').removeClass('active');
-    $(this).addClass('active');
+      $('#sidebar a.nav-link').removeClass('active');
+      $(this).addClass('active');
 
-    $('.content-panel').hide();
-    const panel = $('#' + targetPanelId);
-    panel.fadeIn(400);
+      $('.content-panel').hide();
+      const panel = $('#' + targetPanelId);
+      panel.fadeIn(400);
 
-    if (!panel.hasClass('loaded')) {
-      switch (targetPanelId) {
-        case 'panelInventario':
-          cargarModuloInventario();
-          break;
-        case 'panelVentas':
-          if (appState.productos.length === 0) {
-            cargarProductosParaVenta();
-            cargarClientesEnSelects();
-          }
-          break;
-        case 'panelDeudas':
-          $('#tabDeudasPendientes').click();
-          break;
-        case 'panelAdminEmpleados':
-          cargarPanelGestionEmpleados();
-          break;
-        case 'panelAdminPermisos':
-          cargarRolesParaPermisos();
-          break;
+      if (!panel.hasClass('loaded')) {
+        switch (targetPanelId) {
+          case 'panelInventario':
+            cargarModuloInventario();
+            break;
+          case 'panelVentas':
+            if (appState.productos.length === 0) {
+              cargarProductosParaVenta();
+              cargarClientesEnSelects();
+            }
+            break;
+          case 'panelPagos':
+              initPagosYape();
+              break;
+          case 'panelGastos':
+            cargarHistorialEgresos();
+            break;
+          case 'panelDeudas':
+            $('#tabDeudasPendientes').click();
+            break;
+          case 'panelAdminEmpleados':
+            cargarPanelGestionEmpleados();
+            break;
+          case 'panelAdminPermisos':
+            cargarRolesParaPermisos();
+            break;
+        }
+        panel.addClass('loaded');
       }
-      panel.addClass('loaded');
-    }
-  });
+    });
 
     //----------------------------------------------------
     // 2. MÓDULO DE AUTENTICACIÓN Y UI PRINCIPAL
@@ -548,26 +597,65 @@
     }
 
     /**
-     * ★★★ LÓGICA DE PERMISOS REFACTORIZADA ★★★
+     * ★★★ LÓGICA DE PERMISOS REFACTORIZADA (Y CORREGIDA) ★★★
      * Recorre los permisos del usuario y muestra u oculta elementos de la UI.
-     * CADA elemento interactivo en el HTML debe tener el atributo `data-perm="Modulo.Accion"`.
-     * Ejemplo: <button data-perm="Ventas.crear">Nueva Venta</button>
+     * Combina la lógica de [data-perm] (para botones) y [data-target-panel] (para sidebar).
      */
     function setupPermissions() {
       const permisos = appState.user.permisos;
+      if (!permisos) {
+        console.error('setupPermissions: No hay permisos en appState.user');
+        return;
+      } // 1. Ocultar TODO lo que tenga [data-perm] (botones, etc.)
 
-      // Ocultar TODO lo que requiera un permiso para empezar
-      $('[data-perm]').hide();
+      $('[data-perm]').hide(); // --- [INICIO DE CORRECCIÓN - PROBLEMA 2] ---
+      // 2. Ocultar TODOS los links del sidebar que dependen de permisos
+      // (Usamos 'default-deny': ocultar primero, mostrar después)
 
-      // Recorrer los permisos del usuario y mostrar los elementos permitidos
+      $('#sidebar a.nav-link[data-target-panel]').hide(); // Ocultar el 'padre' del submenú
+      $('#sidebar a.nav-link[href="#adminSubmenu"]').hide(); // --- [FIN DE CORRECCIÓN] ---
+      // 3. Recorrer los permisos del usuario y mostrar los elementos [data-perm] permitidos
       for (const modulo in permisos) {
+        // Asegurarse de que 'permisos[modulo]' sea un objeto
+        if (typeof permisos[modulo] !== 'object' || permisos[modulo] === null)
+          continue;
+
         for (const accion in permisos[modulo]) {
           if (permisos[modulo][accion] === true) {
             // Muestra el elemento que coincide exactamente con "Modulo.Accion"
             $(`[data-perm="${modulo}.${accion}"]`).show();
           }
         }
-      }
+      } // --- [INICIO DE CORRECCIÓN - PROBLEMA 2] ---
+      // 4. Recorrer los links del SIDEBAR y mostrar solo los permitidos
+
+      $('#sidebar a.nav-link[data-target-panel]').each(function () {
+        const $link = $(this);
+        const targetPanelId = $link.data('target-panel'); // ej: "panelInventario"
+        let modulo, accion; // Lógica especial para los paneles de administración
+        // (Sus IDs de panel no coinciden con el nombre del Módulo)
+
+        if (targetPanelId === 'panelAdminEmpleados') {
+          modulo = 'Administracion';
+          accion = 'GestionarEmpleados';
+        } else if (targetPanelId === 'panelAdminPermisos') {
+          modulo = 'Administracion';
+          accion = 'GestionarPermisos';
+        } else {
+          // Lógica estándar (ej: 'panelInventario' -> 'Inventario')
+          modulo = targetPanelId.replace('panel', ''); // Asumimos que el link del menú principal requiere el permiso 'Ver'
+          // (Usamos 'Ver' con mayúscula, como arreglamos en el bug anterior)
+          accion = 'Ver';
+        } // Comprobamos el permiso
+
+        if (permisos[modulo] && permisos[modulo][accion] === true) {
+          $link.show(); // Si es un link de admin, también mostramos el 'padre' del submenú
+
+          if (modulo === 'Administracion') {
+            $('#sidebar a.nav-link[href="#adminSubmenu"]').show();
+          }
+        }
+      }); // --- [FIN DE CORRECCIÓN] ---
     }
 
     //----------------------------------------------------
@@ -959,27 +1047,34 @@
     //----------------------------------------------------
     let inventarioCompleto = []; // Caché para la lista de productos
 
-    // Inicialización de modales (asegúrate de que existan en el HTML)
-    // const modalProducto = new bootstrap.Modal(document.getElementById('modalProducto'));
-    // const modalMovimiento = new bootstrap.Modal(document.getElementById('modalMovimiento'));
-    // const modalPrevisualizacionImportar = new bootstrap.Modal(document.getElementById('modalPrevisualizacionImportar'));
-
     // --- Utilidades de números/moneda (región es-PE + PEN) ---
-    const toNumber = (v) => Number(String(v ?? '').toString().replace(',', '.')) || 0;
-    const formatPEN = (n) => new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(n || 0);
+    const toNumber = (v) =>
+      Number(
+        String(v ?? '')
+          .toString()
+          .replace(',', '.')
+      ) || 0;
+    const formatPEN = (n) =>
+      new Intl.NumberFormat('es-PE', {
+        style: 'currency',
+        currency: 'PEN',
+      }).format(n || 0);
 
     // Escapar valor para usar en regex de DataTables
     const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     // --- Carga y Renderizado de la UI ---
     function cargarModuloInventario() {
+      console.log('DEBUG: 1. Iniciando cargarModuloInventario()');
       if (
         appState.user &&
         appState.user.permisos?.Inventario &&
-        appState.user.permisos.Inventario.ver
+        appState.user.permisos.Inventario.Ver
       ) {
+        console.log('DEBUG: 2. Permisos APROBADOS. Llamando a backend...');
         google.script.run
           .withSuccessHandler((inventario) => {
+            console.log('DEBUG: 3. Backend SUCCESS. Datos recibidos:', inventario);
             inventarioCompleto = inventario || [];
             renderizarTablaInventario(inventarioCompleto);
             actualizarDashboardInventario(inventarioCompleto);
@@ -990,13 +1085,25 @@
             if ($listaSkus.length) {
               $listaSkus.empty();
               inventarioCompleto.forEach((p) =>
-                $listaSkus.append(`<option value="${p.SKU}">${p.Nombre}</option>`)
+                $listaSkus.append(
+                  `<option value="${p.SKU}">${p.Nombre}</option>`
+                )
               );
             }
           })
-          .withFailureHandler((err) => showError('Error al cargar inventario', err?.message || String(err)))
+          .withFailureHandler((err) =>{
+            console.error('DEBUG: 3. Backend FAILURE.', err); // <-- AÑADIR
+            showError('Error al cargar inventario', err?.message || String(err))
+          })
           .obtenerInventarioCompleto();
-      }
+      } else {
+          // ESTA ES LA CAUSA MÁS PROBABLE DE LA FALLA SILENCIOSA
+          console.warn('DEBUG: 2. Permisos DENEGADOS o appState no listo. Carga abortada.'); // <-- AÑADIR
+          console.log('DEBUG: Estado de appState.user:', appState.user); // <-- AÑADIR
+          console.log('DEBUG: appState.user.permisos (Objeto completo):', appState.user.permisos);
+          console.log('DEBUG: Buscando appState.user.permisos.Inventario:', appState.user.permisos?.Inventario);
+          console.log('DEBUG: Buscando appState.user.permisos.Inventario.Ver:', appState.user.permisos?.Inventario?.Ver);
+        }
     }
 
     /**
@@ -1016,134 +1123,201 @@
       );
     }
 
-  // Mantener una única instancia de DataTable
-  let tablaDT = null;
+    // Mantener una única instancia de DataTable
+    let tablaDT = null;
 
-  function renderizarTablaInventario(inventario) {
-    // Usamos la tabla existente en el HTML (#tablaInventario)
-    // y la llenamos con DataTables basados en data[]
-    const dataTableData = (inventario || []).map((p) => {
-      const stock = toNumber(p.Stock);
-      const stockMin = toNumber(p.StockMinimo);
-      const precioCosto = toNumber(p.PrecioCosto);
-      const precioVenta = toNumber(p.PrecioVenta);
-      const valorStock = stock * precioCosto;
+    function renderizarTablaInventario(inventario) {
+      // Usamos la tabla existente en el HTML (#tablaInventario)
+      // y la llenamos con DataTables basados en data[]
+      const dataTableData = (inventario || []).map((p) => {
+        const stock = toNumber(p.Stock);
+        const stockMin = toNumber(p.StockMinimo);
+        const precioCosto = toNumber(p.PrecioCosto);
+        const precioVenta = toNumber(p.PrecioVenta);
+        const valorStock = stock * precioCosto;
 
-      let claseFila = '';
-      const estado = String(p.Estado || '').trim();
-      if (estado === 'Activo') {
-        if (stock <= 0) claseFila = 'table-danger';
-        else if (stock <= stockMin) claseFila = 'table-warning';
-      } else {
-        claseFila = 'table-secondary';
+        let claseFila = '';
+        const estado = String(p.Estado || '').trim();
+        if (estado === 'Activo') {
+          if (stock <= 0) claseFila = 'table-danger';
+          else if (stock <= stockMin) claseFila = 'table-warning';
+        } else {
+          claseFila = 'table-secondary';
+        }
+
+        // Array alineado a las columnas visibles + 2 auxiliares ocultas
+        return [
+          p.SKU,
+          p.Nombre,
+          p.CodigoBarras || 'N/A',
+          p.Categoria || '',
+          stock, // num para ordenar
+          stockMin, // num para ordenar
+          precioCosto, // num para ordenar
+          precioVenta, // num para ordenar
+          valorStock, // num para ordenar
+          // Acciones (HTML)
+          // Usamos una IIFE (función autoejecutable) para construir el HTML
+          // basado en los permisos del usuario logueado (appState).
+            (() => {
+            // Obtenemos los permisos de inventario (o un objeto vacío si no existen)
+            const permisos = appState.user.permisos?.Inventario || {};
+
+            let botonesHtml = '<div class="btn-group" role="group">';
+   
+            // Botón Ver Historial (Requiere permiso 'Ver')
+            // Nota: Usamos 'Ver' con mayúscula, como vimos en la consola
+            if (permisos.Ver) {
+               botonesHtml += `<button class="btn btn-sm btn-outline-info ver-historial-producto" title="Ver Historial (Kardex)"><i class="bi bi-list-ol"></i></button>`;
+            }
+
+             // Botón Editar (Requiere permiso 'Editar')
+            if (permisos.Editar) {
+              botonesHtml += `<button class="btn btn-sm btn-outline-primary btn-editar-producto" title="Editar Producto"><i class="bi bi-pencil-square"></i></button>`;
+            }
+
+            // Botón Desactivar (Requiere 'Eliminar' y que el producto esté Activo)
+            if (permisos.Eliminar && estado === 'Activo') {
+              botonesHtml += `<button class="btn btn-sm btn-outline-danger btn-desactivar-producto" title="Desactivar Producto"><i class="bi bi-slash-circle"></i></button>`;
+            }
+
+            botonesHtml += '</div>';
+            return botonesHtml;
+          })(),
+          p, // 10: objeto producto (oculto)
+          claseFila, // 11: clase fila (oculto)
+        ];
+      });
+
+      if (tablaDT) {
+        tablaDT.clear();
+        tablaDT.rows.add(dataTableData).draw();
+        return;
       }
 
-      // Array alineado a las columnas visibles + 2 auxiliares ocultas
-      return [
-        p.SKU,
-        p.Nombre,
-        p.CodigoBarras || 'N/A',
-        p.Categoria || '',
-        stock,           // num para ordenar
-        stockMin,        // num para ordenar
-        precioCosto,     // num para ordenar
-        precioVenta,     // num para ordenar
-        valorStock,      // num para ordenar
-        // Acciones (HTML)
-        `
-          <div class="btn-group" role="group">
-            <button class="btn btn-sm btn-outline-info ver-historial-producto" title="Ver Historial (Kardex)"><i class="bi bi-list-ol"></i></button>
-            <button class="btn btn-sm btn-outline-primary btn-editar-producto" data-perm="Inventario.editar" title="Editar Producto"><i class="bi bi-pencil-square"></i></button>
-            ${estado === 'Activo' ? `<button class="btn btn-sm btn-outline-danger btn-desactivar-producto" data-perm="Inventario.eliminar" title="Desactivar Producto"><i class="bi bi-slash-circle"></i></button>` : ''}
-          </div>
-        `,
-        p,           // 10: objeto producto (oculto)
-        claseFila    // 11: clase fila (oculto)
-      ];
-    });
+      tablaDT = $('#tablaInventario').DataTable({
+        data: dataTableData,
+        language: {
+          url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json',
+        },
+        columns: [
+          { title: 'SKU' },
+          { title: 'Nombre' },
+          { title: 'Código Barras' },
+          { title: 'Categoría' },
+          // Render numéricos con formato para display pero manteniendo sort por valor
+          {
+            title: 'Stock',
+            render: (d, t) =>
+              t === 'display'
+                ? `<span class="fw-bold ${d <= 0 ? 'text-danger' : ''}">${d}</span>`
+                : d,
+          },
+          {
+            title: 'Stock Mínimo',
+            render: (d, t) => (t === 'display' ? `${d}` : d),
+          },
+          {
+            title: 'Precio Costo',
+            render: (d, t) => (t === 'display' ? `${formatPEN(d)}` : d),
+          },
+          {
+            title: 'Precio Venta',
+            render: (d, t) => (t === 'display' ? `${formatPEN(d)}` : d),
+          },
+          {
+            title: 'Valor Stock',
+            render: (d, t) => (t === 'display' ? `${formatPEN(d)}` : d),
+          },
+          { title: 'Acciones', orderable: false, searchable: false },
+          { visible: false, searchable: false }, // objeto producto
+          { visible: false, searchable: false }, // clase fila
+        ],
+        createdRow: function (row, data) {
+          $(row).addClass(data[11]);
+          $(row).data('producto', data[10]);
+        },
+      });
 
-    if (tablaDT) {
-      tablaDT.clear();
-      tablaDT.rows.add(dataTableData).draw();
-      return;
+      // Filtro por Categoría (col 3) con match exacto, escapando regex
+      $('#filtroCategoria')
+        .off('change')
+        .on('change', function () {
+          const v = this.value;
+          if (!v || v === 'Todos') {
+            // 'Todos' también debe limpiar el filtro
+            tablaDT.column(3).search('').draw();
+          } else {
+            tablaDT
+              .column(3)
+              .search(`^${escapeRegex(v)}$`, true, false)
+              .draw();
+          }
+        });
+
+      // Filtro por Estado (custom) solo para esta tabla
+      let estadoFiltro = '';
+      let estadoFiltroRegistrado = false;
+      const filtroEstadoFn = function (settings, data, dataIndex) {
+        if (!estadoFiltro || estadoFiltro === 'Todos') return true; // 'Todos' también es sin filtro
+        // limitar al id de nuestra tabla
+        if (settings.nTable && settings.nTable.id !== 'tablaInventario')
+          return true;
+        const producto = tablaDT.row(dataIndex).data()?.[10] || {};
+        const stock = toNumber(data[4]);
+        const stockMin = toNumber(data[5]);
+        const activo = String(producto.Estado || '').trim() === 'Activo';
+        if (estadoFiltro === 'BajoStock') return activo && stock <= stockMin;
+        if (estadoFiltro === 'Activo') return activo;
+        if (estadoFiltro === 'Inactivo') return !activo;
+        return true;
+      };
+
+      if (!estadoFiltroRegistrado) {
+        $.fn.dataTable.ext.search.push(filtroEstadoFn);
+        estadoFiltroRegistrado = true;
+      }
+
+      $('#filtroEstado')
+        .off('change')
+        .on('change', function () {
+          estadoFiltro = this.value || '';
+          tablaDT.draw();
+        });
     }
-
-    tablaDT = $('#tablaInventario').DataTable({
-      data: dataTableData,
-      language: { url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json' },
-      columns: [
-        { title: 'SKU' },
-        { title: 'Nombre' },
-        { title: 'Código Barras' },
-        { title: 'Categoría' },
-        // Render numéricos con formato para display pero manteniendo sort por valor
-        { title: 'Stock', render: (d, t) => (t === 'display' ? `<span class="fw-bold ${d <= 0 ? 'text-danger' : ''}">${d}</span>` : d) },
-        { title: 'Stock Mínimo', render: (d, t) => (t === 'display' ? `${d}` : d) },
-        { title: 'Precio Costo', render: (d, t) => (t === 'display' ? `${formatPEN(d)}` : d) },
-        { title: 'Precio Venta', render: (d, t) => (t === 'display' ? `${formatPEN(d)}` : d) },
-        { title: 'Valor Stock', render: (d, t) => (t === 'display' ? `${formatPEN(d)}` : d) },
-        { title: 'Acciones', orderable: false, searchable: false },
-        { visible: false, searchable: false }, // objeto producto
-        { visible: false, searchable: false }, // clase fila
-      ],
-      createdRow: function (row, data) {
-        $(row).addClass(data[11]);
-        $(row).data('producto', data[10]);
-      }
-    });
-
-    // Filtro por Categoría (col 3) con match exacto, escapando regex
-    $('#filtroCategoria').off('change').on('change', function () {
-      const v = this.value;
-      if (!v) {
-        tablaDT.column(3).search('').draw();
-      } else {
-        tablaDT.column(3).search(`^${escapeRegex(v)}$`, true, false).draw();
-      }
-    });
-
-    // Filtro por Estado (custom) solo para esta tabla
-    let estadoFiltro = '';
-    let estadoFiltroRegistrado = false;
-    const filtroEstadoFn = function (settings, data, dataIndex) {
-      if (!estadoFiltro) return true; // sin filtro
-      // limitar al id de nuestra tabla
-      if (settings.nTable && settings.nTable.id !== 'tablaInventario') return true;
-      const producto = tablaDT.row(dataIndex).data()?.[10] || {};
-      const stock = toNumber(data[4]);
-      const stockMin = toNumber(data[5]);
-      const activo = String(producto.Estado || '').trim() === 'Activo';
-      if (estadoFiltro === 'BajoStock') return activo && stock <= stockMin;
-      if (estadoFiltro === 'Activo') return activo;
-      if (estadoFiltro === 'Inactivo') return !activo;
-      return true;
-    };
-
-    if (!estadoFiltroRegistrado) {
-      $.fn.dataTable.ext.search.push(filtroEstadoFn);
-      estadoFiltroRegistrado = true;
-    }
-
-    $('#filtroEstado').off('change').on('change', function () {
-      estadoFiltro = this.value || '';
-      tablaDT.draw();
-    });
-  }
 
     function actualizarDashboardInventario(inventario) {
-      const valorTotal = inventario.reduce(
+      const inventarioActivo = inventario.filter((p) => p.Estado === 'Activo');
+
+      const valorTotal = inventarioActivo.reduce(
         (sum, p) => sum + Number(p.Stock) * Number(p.PrecioCosto),
         0
       );
-      const itemsBajoStock = inventario.filter(
-        (p) => p.Estado === 'Activo' && Number(p.Stock) <= Number(p.StockMinimo)
+
+      const itemsBajoStock = inventarioActivo.filter(
+        (p) => Number(p.Stock) <= Number(p.StockMinimo) && Number(p.Stock) > 0
       ).length;
-      $('#valorTotalInventario').text(`S/ ${valorTotal.toFixed(2)}`);
-      $('#totalSkus').text(inventario.length);
+
+      const skusUnicosActivos = inventarioActivo.length;
+
+      $('#valorTotalInventario').text(formatPEN(valorTotal));
+      $('#totalSkus').text(skusUnicosActivos);
       $('#itemsStockBajo').text(itemsBajoStock);
     }
 
     function abrirModalProducto(producto = null) {
+      // --- [CORRECCIÓN] Verificación de Modal ---
+      if (!modalProducto) {
+        // Usamos la función 'showError' que definiste en otro módulo
+        if (typeof showError === 'function') {
+          showError('Error de UI', 'El modal de producto no está disponible.');
+        } else {
+          alert('Error: El modal de producto no está disponible.');
+        }
+        return;
+      }
+      // --- Fin Corrección ---
+
       const esEdicion = producto !== null;
       $('#formProducto')[0].reset();
 
@@ -1152,39 +1326,32 @@
       );
       $('#prodSku').prop('disabled', esEdicion);
 
-      if (esEdicion) {
-        $('#prodSku').val(producto.SKU);
-        $('#prodNombre').val(producto.Nombre);
-        $('#prodCodigoBarras').val(producto.CodigoBarras);
-        $('#prodStock').val(producto.Stock).prop('disabled', true);
-        $('#prodStockMin').val(producto.StockMinimo);
-        $('#prodPrecioCosto').val(producto.PrecioCosto);
-        $('#prodPrecioVenta').val(producto.PrecioVenta);
-        $('#prodImagenUrl').val(producto.ImagenURL);
-        google.script.run
-          .withSuccessHandler((categorias) => {
-            const select = $('#prodCategoria')
-              .empty()
-              .append('<option value="">Seleccione o cree una...</option>');
-            categorias.forEach((cat) =>
-              select.append(`<option value="${cat}">${cat}</option>`)
-            );
-            $('#prodCategoria').val(producto.Categoria);
-          })
-          .obtenerCategoriasUnicas();
-      } else {
-        $('#prodStock').prop('disabled', false);
-        google.script.run
-          .withSuccessHandler((categorias) => {
-            const select = $('#prodCategoria')
-              .empty()
-              .append('<option value="">Seleccione o cree una...</option>');
-            categorias.forEach((cat) =>
-              select.append(`<option value="${cat}">${cat}</option>`)
-            );
-          })
-          .obtenerCategoriasUnicas();
-      }
+      // Cargar categorías primero
+      google.script.run
+        .withSuccessHandler((categorias) => {
+          const select = $('#prodCategoria')
+            .empty()
+            .append('<option value="">Seleccione o cree una...</option>');
+          categorias.forEach((cat) =>
+            select.append(`<option value="${cat}">${cat}</option>`)
+          );
+
+          // Si es edición, rellenar datos después de cargar categorías
+          if (esEdicion) {
+            $('#prodSku').val(producto.SKU);
+            $('#prodNombre').val(producto.Nombre);
+            $('#prodCodigoBarras').val(producto.CodigoBarras);
+            $('#prodStock').val(producto.Stock).prop('disabled', true);
+            $('#prodStockMin').val(producto.StockMinimo);
+            $('#prodPrecioCosto').val(producto.PrecioCosto);
+            $('#prodPrecioVenta').val(producto.PrecioVenta);
+            $('#prodImagenUrl').val(producto.ImagenURL);
+            $('#prodCategoria').val(producto.Categoria); // Seleccionar la categoría
+          } else {
+            $('#prodStock').prop('disabled', false);
+          }
+        })
+        .obtenerCategoriasUnicas();
 
       modalProducto.show();
     }
@@ -1192,7 +1359,7 @@
     // --- Manejadores de Eventos ---
 
     $('#btnVerInventario').on('click', function () {
-      const panel = $('#panelGestionInventario');
+      const panel = $('#panelInventario');
       panel.slideToggle();
       if (panel.is(':visible') && inventarioCompleto.length === 0) {
         cargarModuloInventario();
@@ -1232,6 +1399,17 @@
 
     $('#formProducto').on('submit', function (e) {
       e.preventDefault();
+      // --- [CORRECCIÓN] Verificación de Modal ---
+      if (!modalProducto) {
+        if (typeof showError === 'function') {
+          showError('Error de UI', 'El modal de producto no está disponible.');
+        } else {
+          alert('Error: El modal de producto no está disponible.');
+        }
+        return;
+      }
+      // --- Fin Corrección ---
+
       const esEdicion = $('#prodSku').is(':disabled');
 
       const productoData = {
@@ -1270,12 +1448,39 @@
     });
 
     $('#btnRegistrarMovimiento').on('click', function () {
+      // --- [CORRECCIÓN] Verificación de Modal ---
+      if (!modalMovimiento) {
+        if (typeof showError === 'function') {
+          showError(
+            'Error de UI',
+            'El modal de movimiento no está disponible.'
+          );
+        } else {
+          alert('Error: El modal de movimiento no está disponible.');
+        }
+        return;
+      }
+      // --- Fin Corrección ---
       $('#formMovimiento')[0].reset();
       modalMovimiento.show();
     });
 
     $('#formMovimiento').on('submit', function (e) {
       e.preventDefault();
+      // --- [CORRECCIÓN] Verificación de Modal ---
+      if (!modalMovimiento) {
+        if (typeof showError === 'function') {
+          showError(
+            'Error de UI',
+            'El modal de movimiento no está disponible.'
+          );
+        } else {
+          alert('Error: El modal de movimiento no está disponible.');
+        }
+        return;
+      }
+      // --- Fin Corrección ---
+
       const movimiento = {
         sku: $('#movSku').val(),
         tipo: $('#movTipo').val(),
@@ -1283,11 +1488,21 @@
         notas: $('#movNotas').val(),
         emailUsuario: appState.user.email,
       };
-      if (movimiento.tipo !== 'INGRESO') movimiento.cantidad *= -1; // Convertir a negativo si es salida
-      if (movimiento.cantidad === 0) {
-        showError('Cantidad inválida', 'La cantidad no puede ser cero.');
+
+      if (movimiento.cantidad <= 0) {
+        // Validar cantidad positiva
+        showError(
+          'Cantidad inválida',
+          'La cantidad debe ser un número mayor a cero.'
+        );
         return;
       }
+
+      // La lógica de conversión a negativo se hará en el backend o aquí, pero basado en tipo
+      if (movimiento.tipo !== 'INGRESO') {
+        // movimiento.cantidad *= -1; // Dejaremos que el backend maneje la lógica
+      }
+
       google.script.run
         .withSuccessHandler((res) => {
           showToast('success', res);
@@ -1299,6 +1514,20 @@
     });
 
     $('#btnImportarProductos').on('click', function () {
+      // --- [CORRECCIÓN] Verificación de Modal ---
+      if (!modalPrevisualizacionImportar) {
+        if (typeof showError === 'function') {
+          showError(
+            'Error de UI',
+            'El modal de importación no está disponible.'
+          );
+        } else {
+          alert('Error: El modal de importación no está disponible.');
+        }
+        return;
+      }
+      // --- Fin Corrección ---
+
       Swal.fire({
         title: 'Iniciar Importación',
         text: "Se leerá la hoja 'Importar'. ¿Deseas continuar?",
@@ -1325,11 +1554,11 @@
                   `<tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>`
                 );
                 const tbody = $('#previewTbody').empty();
-                productosValidos.forEach((p) =>
+                productosValidos.forEach((p) => {
                   tbody.append(
                     `<tr>${headers.map((h) => `<td>${p[h]}</td>`).join('')}</tr>`
-                  )
-                );
+                  );
+                });
                 $('#btnConfirmarImportacion')
                   .show()
                   .data('productos', productosValidos);
@@ -1346,6 +1575,20 @@
     });
 
     $(document).on('click', '#btnConfirmarImportacion', function () {
+      // --- [CORRECCIÓN] Verificación de Modal ---
+      if (!modalPrevisualizacionImportar) {
+        if (typeof showError === 'function') {
+          showError(
+            'Error de UI',
+            'El modal de importación no está disponible.'
+          );
+        } else {
+          alert('Error: El modal de importación no está disponible.');
+        }
+        return;
+      }
+      // --- Fin Corrección ---
+
       const btn = $(this);
       const productosAImportar = btn.data('productos');
       btn
@@ -1365,6 +1608,16 @@
     });
 
     $('#btnNuevaCategoria').on('click', function () {
+      // --- [CORRECCIÓN] Verificación de Modal ---
+      if (!modalProducto) {
+        if (typeof showError === 'function') {
+          showError('Error de UI', 'El modal de producto no está disponible.');
+        } else {
+          alert('Error: El modal de producto no está disponible.');
+        }
+        return;
+      }
+      // --- Fin Corrección ---
       modalProducto.hide();
       Swal.fire({
         title: 'Crear Nueva Categoría',
@@ -1434,7 +1687,7 @@
           historial.forEach((mov) => {
             const cantClass = mov.Cantidad > 0 ? 'text-success' : 'text-danger';
             const cantSigno = mov.Cantidad > 0 ? '+' : '';
-            tablaHtml += `<tr><td>${mov.FechaHora}</td><td>${mov.Tipo}</td><td class="${cantClass} fw-bold">${cantSigno}${mov.Cantidad}</td><td>${mov.UsuarioEmail}</td><td>${mov.Notas}</td></tr>`;
+            tablaHtml += `<tr><td>${mov.FechaHora}</td><td>${mov.Tipo}</td><td class="${cantClass} fw-bold">${cantSigno}${mov.Cantidad}</td><td>${mov.emailusuario}</td><td>${mov.Notas}</td></tr>`;
           });
           tablaHtml += '</tbody></table></div>';
           Swal.fire({
@@ -1446,7 +1699,6 @@
         .withFailureHandler((err) => showError('Error', err.message))
         .obtenerHistorialProducto(sku);
     });
-
     //----------------------------------------------------
     // 6. MÓDULO DE VENTAS Y PAGOS
     //----------------------------------------------------
@@ -1455,27 +1707,59 @@
     // const modalDetalleVenta = new bootstrap.Modal(document.getElementById('modalDetalleVenta'));
     let historialVentasCache = []; // Caché para el historial de ventas
 
-    // --- Lógica de la Galería de Productos y Carrito ---
-
+    // // --- Lógica de la Galería de Productos y Carrito ---
+    // function cargarProductosParaVenta() {
+    //   google.script.run
+    //     .withSuccessHandler((productos) => {
+    //       appState.productos = productos;
+    //       const categorias = [
+    //         'Todos',
+    //         ...new Set(productos.map((p) => p.categoria || 'Varios')),
+    //       ];
+    //       const botonesCategorias = $('#botonesCategorias').empty();
+    //       categorias.forEach((cat) => {
+    //         const activeClass = cat === 'Todos' ? 'active' : '';
+    //         botonesCategorias.append(
+    //           `<button type="button" class="btn btn-outline-primary btn-sm m-1 ${activeClass} btnCategoria" data-categoria="${cat}">${cat}</button>`
+    //         );
+    //       });
+    //       renderizarGaleriaProductos('Todos');
+    //     })
+    //     .obtenerProductosActivos();
+    // }
     function cargarProductosParaVenta() {
       google.script.run
-        .withSuccessHandler((productos) => {
+        .withSuccessHandler(function (productos) {
           appState.productos = productos;
-          const categorias = [
-            'Todos',
-            ...new Set(productos.map((p) => p.categoria || 'Varios')),
-          ];
-          const botonesCategorias = $('#botonesCategorias').empty();
-          categorias.forEach((cat) => {
-            const activeClass = cat === 'Todos' ? 'active' : '';
+
+          // Generar categorías sin usar sintaxis moderna
+          var categorias = ['Todos'];
+          productos.forEach(function (p) {
+            var cat = p.categoria || 'Varios';
+            if (categorias.indexOf(cat) === -1) {
+              categorias.push(cat);
+            }
+          });
+
+          var botonesCategorias = $('#botonesCategorias').empty();
+          categorias.forEach(function (cat) {
+            var activeClass = cat === 'Todos' ? 'active' : '';
             botonesCategorias.append(
-              `<button type="button" class="btn btn-outline-primary btn-sm m-1 ${activeClass} btnCategoria" data-categoria="${cat}">${cat}</button>`
+              '<button type="button" class="btn btn-outline-primary btn-sm m-1 ' +
+                activeClass +
+                ' btnCategoria" data-categoria="' +
+                cat +
+                '">' +
+                cat +
+                '</button>'
             );
           });
+
           renderizarGaleriaProductos('Todos');
         })
         .obtenerProductosActivos();
     }
+
 
     function renderizarGaleriaProductos(categoria) {
       const contenedor = $('#contenedorProductos').empty();
@@ -1494,7 +1778,9 @@
       productosFiltrados.forEach((prod) => {
         const nombre = escapeHTML(prod.nombre);
         const sku = escapeHTML(prod.sku);
-        const imagen = escapeHTML(prod.imagen || 'https://via.placeholder.com/150');
+        const imagen = escapeHTML(
+          prod.imagen || 'https://via.placeholder.com/150'
+        );
         const card = `
             <div class="col-6 col-md-3 col-lg-2 mb-3">
               <div class="card h-100 producto-item shadow-sm" style="cursor: pointer;" 
@@ -1698,7 +1984,14 @@
       removerProductoDelCarrito(sku);
     });
 
-    $('#btnFinalizarVenta').on('click', function () {
+    // =================================================================
+    //  EVENTO FINALIZAR VENTA (CORREGIDO Y BLINDADO)
+    // =================================================================
+    
+    // Usamos .off() para limpiar cualquier listener previo y evitar el error 429
+    $('#btnFinalizarVenta').off('click').on('click', function () {
+      
+      // 1. Validaciones iniciales
       if (!appState.caja || appState.caja.Estado !== 'Abierta') {
         showError(
           'Caja Cerrada',
@@ -1706,6 +1999,7 @@
         );
         return;
       }
+      
       if (appState.carrito.length === 0) {
         showError(
           'Carrito Vacío',
@@ -1713,40 +2007,57 @@
         );
         return;
       }
+
+      // 2. Bloqueo de Botón (UX)
       const btn = $(this);
-      btn
-        .prop('disabled', true)
-        .html(
-          '<span class="spinner-border spinner-border-sm"></span> Registrando Orden...'
-        );
+      // Guardamos el HTML original (icono + texto) para restaurarlo luego
+      const contenidoOriginal = '<i class="bi bi-check-circle"></i> Finalizar Venta'; 
+      
+      btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Registrando Orden...');
+
+      // 3. Preparación de Datos
       const clienteSeleccionado = $('#selectCliente option:selected');
+      
+      // Validación extra por seguridad: asegurar que hay cliente
+      let nombreCliente = clienteSeleccionado.text();
+      if(!clienteSeleccionado.val()) {
+          // Si por alguna razón no hay cliente seleccionado, forzamos uno genérico o validamos
+          // (Depende de tu lógica, aquí asumo que siempre quieres enviar algo)
+      }
+
       const ordenData = {
         carrito: appState.carrito,
         cliente: {
           dni: clienteSeleccionado.val(),
-          nombre: clienteSeleccionado.text(),
+          nombre: nombreCliente,
         },
         pc: $('#selectPc').val(),
         sesionID: appState.caja.SesionID,
         usuarioEmail: appState.user.email,
       };
+
+      // 4. Llamada al Backend
       google.script.run
         .withSuccessHandler((resultado) => {
           Swal.fire({
             icon: 'success',
             title: 'Orden Registrada',
             text: `La orden ${resultado.ventaID} por un total de S/ ${resultado.total.toFixed(2)} ha sido registrada y está pendiente de pago.`,
+            timer: 2000,
+            showConfirmButton: false
           });
+          
           resetearFormularioVenta();
-          btn
-            .prop('disabled', false)
-            .html('<i class="bi bi-check-circle"></i> Finalizar Venta'); // <-- CORRECCIÓN
+          
+          // Restaurar botón
+          btn.prop('disabled', false).html(contenidoOriginal);
         })
         .withFailureHandler((err) => {
+          console.error("Error en venta:", err);
           showError('Error al Registrar Orden', err.message);
-          btn
-            .prop('disabled', false)
-            .html('<i class="bi bi-check-circle"></i> Finalizar Venta'); // <-- CORRECCIÓN
+          
+          // Restaurar botón para permitir reintento
+          btn.prop('disabled', false).html(contenidoOriginal);
         })
         .registrarOrdenDeVenta(ordenData);
     });
@@ -1793,111 +2104,130 @@
         .obtenerHistorialVentas();
     }
 
-  /**
-   * --- VERSIÓN RECUPERADA (02/AGOSTO) ---
-   * Renderiza el historial de ventas en la tabla y se asegura de que DataTables
-   * se reinicialice correctamente después de cada actualización de datos.
-   * @param {Array<Object>} ventas - El array de objetos de venta del servidor.
-   */
-  function renderizarHistorial(ventas) {
+    /**
+     * --- VERSIÓN RECUPERADA (03/NOV) ---
+     * Renderiza el historial de ventas en la tabla y se asegura de que DataTables
+     * se reinicialice correctamente después de cada actualización de datos.
+     * @param {Array<Object>} ventas - El array de objetos de venta del servidor.
+     */
+    function renderizarHistorial(ventas) {
+      console.log("📦 [DEBUG] Datos recibidos en renderizarHistorial:", ventas);
+      if (ventas && ventas.length > 0) {
+          console.log("🔍 [DEBUG] Estructura del primer objeto venta:", ventas[0]);
+          console.log("💰 [DEBUG] Valor de totalVenta:", ventas[0].totalVenta);
+          console.log("Tipo de totalVenta:", typeof ventas[0].totalVenta);
+      }
       // Primero, verificamos si la tabla ya es una DataTable.
       if ($.fn.DataTable.isDataTable('#tablaHistorial')) {
-          // Si ya existe, la destruimos por completo. Esto es clave.
-          $('#tablaHistorial').DataTable().destroy();
+        // Si ya existe, la destruimos por completo. Esto es clave.
+        $('#tablaHistorial').DataTable().destroy();
       }
 
       // Ahora que la tabla está "limpia", vaciamos el tbody para prepararlo para los nuevos datos.
       const tbody = $('#historialBody').empty();
 
       if (!ventas || ventas.length === 0) {
-          tbody.html('<tr><td colspan="7" class="text-center text-muted">No se encontraron ventas para mostrar.</td></tr>');
+        tbody.html(
+          '<tr><td colspan="7" class="text-center text-muted">No se encontraron ventas para mostrar.</td></tr>'
+        );
       } else {
-          // Llenamos el tbody con las nuevas filas.
-          ventas.forEach((venta) => {
-              const estado = escapeHTML(venta.Estado);
-              const ventaId = escapeHTML(venta.VentaID);
-              const usuario = escapeHTML(venta.UsuarioEmail);
-              const cliente = escapeHTML(venta.ClienteNombre);
-              const estadoBadge = obtenerBadgeEstado(venta.Estado);
-              const botonesAccion = generarBotonesAccion(venta.Estado, venta.VentaID);
-              const fila = `
-                  <tr>
-                      <td>${ventaId}</td>
-                      <td>${formatearFechaHora(venta.FechaHora)}</td>
-                      <td>${usuario}</td>
-                      <td>${cliente}</td>
-                      <td>S/ ${Number(venta.Total).toFixed(2)}</td>
-                      <td><span class="badge ${estadoBadge}">${estado}</span></td>
-                      <td class="text-nowrap">${botonesAccion}</td>
-                  </tr>
-              `;
-              tbody.append(fila);
-          });
+        // Llenamos el tbody con las nuevas filas.
+        ventas.forEach((venta) => {
+          const estado = escapeHTML(venta.EstadoPago);
+          const ventaId = escapeHTML(venta.VentaID);
+          const usuario = escapeHTML(venta.UsuarioEmail);
+          const cliente = escapeHTML(venta.ClienteNombre);
+          const estadoBadge = obtenerBadgeEstado(venta.EstadoPago);
+          const botonesAccion = generarBotonesAccion(
+            venta.EstadoPago,
+            venta.VentaID
+          );
+          const valorCrudo = venta.totalVenta ?? venta.Total ?? venta.Monto ?? 0;
+          const precioFinal = Number(valorCrudo);
+          const fila = `
+                    <tr>
+                        <td>${ventaId}</td>
+                        <td>${formatearFechaHora(venta.FechaHora)}</td>
+                        <td>${usuario}</td>
+                        <td>${cliente}</td>
+                        <td>S/ ${precioFinal.toFixed(2)}</td>
+                        <td><span class="badge ${estadoBadge}">${estado}</span></td>
+                        <td class="text-nowrap">${botonesAccion}</td>
+                    </tr>
+                `;
+          tbody.append(fila);
+        });
       }
 
       // Finalmente, con el HTML ya renderizado en la página, inicializamos DataTables.
       $('#tablaHistorial').DataTable({
-          language: {
-              url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json',
-          },
-          order: [[1, 'desc']], // Ordenar por fecha descendente
-          responsive: true,
-          pageLength: 10,
-          lengthMenu: [10, 25, 50],
+        language: {
+          url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json',
+        },
+        order: [[1, 'desc']], // Ordenar por fecha descendente
+        responsive: true,
+        pageLength: 10,
+        lengthMenu: [10, 25, 50],
       });
-  }
+    }
 
+    /**
+     * Genera los botones de acción para una venta según su estado.
+     * @param {string} estado - El estado actual de la venta.
+     * @param {string} ventaID - El ID de la venta.
+     * @returns {string} El HTML de los botones de acción.
+     */
+    function generarBotonesAccion(estado, ventaID) {
+      const btnVer = `<button class="btn btn-sm btn-info ver-detalles" data-id="${ventaID}" title="Ver Detalles"><i class="bi bi-eye"></i></button>`;
 
-  /**
-   * Genera los botones de acción para una venta según su estado.
-   * @param {string} estado - El estado actual de la venta.
-   * @param {string} ventaID - El ID de la venta.
-   * @returns {string} El HTML de los botones de acción.
-   */
-  function generarBotonesAccion(estado, ventaID) {
-      const btnVer = `<button class="btn btn-sm btn-info ver-detalles" data-id="${ventaID}" title="Ver Detalles"><i class="fas fa-eye"></i></button>`;
-      
       if (estado === 'Pendiente') {
-          const btnConfirmar = `<button class="btn btn-sm btn-success btn-confirmar-venta" data-id="${ventaID}" title="Confirmar Venta"><i class="fas fa-check"></i></button>`;
-          const btnCancelar = `<button class="btn btn-sm btn-danger btn-cancelar-venta" data-id="${ventaID}" title="Cancelar Venta"><i class="fas fa-times"></i></button>`;
-          return `${btnVer} ${btnConfirmar} ${btnCancelar}`;
+        const btnConfirmar = `<button class="btn btn-sm btn-success btn-confirmar-venta" data-id="${ventaID}" title="Confirmar Venta"><i class="bi bi-cart-check"></i></button>`;
+        const btnCancelar = `<button class="btn btn-sm btn-danger btn-cancelar-venta" data-id="${ventaID}" title="Cancelar Venta"><i class="bi bi-cart-x"></i></button>`;
+        return `${btnVer} ${btnConfirmar} ${btnCancelar}`;
       }
-      
+
       return btnVer;
-  }
+    }
 
-  /**
-   * Devuelve la clase CSS de Bootstrap para el badge del estado.
-   * @param {string} estado - El estado de la venta.
-   * @returns {string} La clase CSS.
-   */
-  function obtenerBadgeEstado(estado) {
+    /**
+     * Devuelve la clase CSS de Bootstrap para el badge del estado.
+     * @param {string} estado - El estado de la venta.
+     * @returns {string} La clase CSS.
+     */
+    function obtenerBadgeEstado(estado) {
       switch (estado) {
-          case 'Confirmado':
-          case 'Confirmada':
-              return 'bg-success';
-          case 'Cancelada':
-              return 'bg-danger';
-          case 'Pendiente':
-              return 'bg-warning text-dark';
-          default:
-              return 'bg-secondary';
+        case 'Confirmado':
+        case 'Confirmada':
+          return 'bg-success';
+        case 'Cancelada':
+          return 'bg-danger';
+        case 'Pendiente':
+          return 'bg-warning text-dark';
+        // [MEJORA] Añadido el estado 'Pagada' que se usa en Ventas.gs
+        case 'Pagada':
+          return 'bg-primary';
+        default:
+          return 'bg-secondary';
       }
-  }
+    }
 
-  /**
-   * Formatea una fecha ISO a un formato local legible.
-   * @param {string} fechaISO - La fecha en formato ISO.
-   * @returns {string} La fecha formateada.
-   */
-  function formatearFechaHora(fechaISO) {
+    /**
+     * Formatea una fecha ISO a un formato local legible.
+     * @param {string} fechaISO - La fecha en formato ISO.
+     * @returns {string} La fecha formateada.
+     */
+    function formatearFechaHora(fechaISO) {
       if (!fechaISO) return 'N/A';
       const fecha = new Date(fechaISO);
       return fecha.toLocaleString('es-PE', {
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', hour12: true
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
       });
-  }
+    }
 
     // --- AÑADE ESTOS NUEVOS MANEJADORES DE EVENTOS A TU JS ---
     // (Puedes ponerlos junto a los otros eventos del historial)
@@ -1993,8 +2323,6 @@
           .obtenerDetallesDeVenta(ventaID);
       }
     });
-
-    
 
     //----------------------------------------------------
     // 10. MÓDULO DE DASHBOARD Y REPORTES
@@ -2338,33 +2666,24 @@
       );
     }
 
-    //----------------------------------------------------
-    // 11. MÓDULO DE LÓGICA DE CAJA
+//----------------------------------------------------
+    // 11. MÓDULO DE LÓGICA DE CAJA (FINAL)
     //----------------------------------------------------
 
-    // const modalAbrirCaja = new bootstrap.Modal(document.getElementById('modalAbrirCaja'), {
-    //   backdrop: 'static',
-    //   keyboard: false
-    // });
-    // const modalCerrarCaja = new bootstrap.Modal(document.getElementById('modalCerrarCaja'));
     let resumenDeCierreCache = null;
 
     /**
-     * Verifica el estado de la caja al iniciar la app. Si está cerrada,
-     * bloquea la UI y muestra el modal de apertura.
+     * Verifica el estado de la caja al iniciar la app.
      */
     function verificarEstadoDeCajaAlCargar() {
       google.script.run
         .withSuccessHandler((sesionAbierta) => {
           if (sesionAbierta) {
             appState.caja = sesionAbierta;
-            $('#cajaBlocker').hide(); // Asegúrate de tener <div id="cajaBlocker"> en tu HTML
+            $('#cajaBlocker').hide(); 
             $('#btnCerrarCaja').show();
-            showToast(
-              'info',
-              `Sesión de caja ${sesionAbierta.SesionID} ya está activa.`
-            );
-            inicializarDashboard(); // Ahora que la caja está verificada, cargamos el dashboard
+            showToast('info', `Sesión de caja ${sesionAbierta.SesionID} activa.`);
+            inicializarDashboard(); 
           } else {
             appState.caja = null;
             $('#cajaBlocker').show();
@@ -2373,11 +2692,8 @@
           }
         })
         .withFailureHandler((err) => {
-          showError(
-            'Error Crítico de Caja',
-            'No se pudo verificar el estado de la caja: ' + err.message
-          );
-          $('#cajaBlocker').show(); // Bloquear por seguridad
+          showError('Error Crítico', 'No se pudo verificar caja: ' + err.message);
+          $('#cajaBlocker').show();
         })
         .obtenerEstadoCajaActual();
     }
@@ -2387,36 +2703,25 @@
       e.preventDefault();
       const monto = parseFloat($('#montoApertura').val());
       if (isNaN(monto) || monto < 0) {
-        showError(
-          'Monto inválido',
-          'Por favor, ingresa un monto de apertura válido.'
-        );
+        showError('Monto inválido', 'Ingresa un monto válido.');
         return;
       }
       const btn = $(this).find('button[type="submit"]');
-      btn
-        .prop('disabled', true)
-        .html(
-          '<span class="spinner-border spinner-border-sm"></span> Abriendo...'
-        );
+      btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Abriendo...');
 
       google.script.run
         .withSuccessHandler((nuevaSesion) => {
           appState.caja = nuevaSesion;
           modalAbrirCaja.hide();
           $('#cajaBlocker').fadeOut();
-          Swal.fire(
-            '¡Caja Abierta!',
-            `Turno iniciado con S/ ${monto.toFixed(2)}`,
-            'success'
-          );
+          Swal.fire('¡Caja Abierta!', `Turno iniciado con S/ ${monto.toFixed(2)}`, 'success');
           $('#btnCerrarCaja').show();
           inicializarDashboard();
-          btn.prop('disabled', false).text('Iniciar Caja'); // <-- CORRECCIÓN
+          btn.prop('disabled', false).text('Iniciar Caja');
         })
         .withFailureHandler((err) => {
           showError('Error', err.message);
-          btn.prop('disabled', false).text('Iniciar Caja'); // <-- CORRECCIÓN
+          btn.prop('disabled', false).text('Iniciar Caja');
         })
         .iniciarNuevaSesion(monto, appState.user.email);
     });
@@ -2424,65 +2729,78 @@
     // Evento para el botón de cerrar caja
     $('#btnCerrarCaja').on('click', function () {
       showToast('info', 'Calculando resumen del turno...');
+      
       google.script.run
         .withSuccessHandler((resumen) => {
           resumenDeCierreCache = resumen;
-          // Llenar los campos del resumen en el modal
-          $('#cierreTotalVentasApp').text(
-            `S/ ${resumen.totalVentasApp.toFixed(2)}`
-          );
-          $('#cierreQVentas').text(resumen.qVentas);
-          $('#cierrePagosDeuda').text(
-            `S/ ${resumen.totalPagosDeudaEfectivo.toFixed(2)}`
-          );
-          $('#cierreYapePlin').text(`S/ ${resumen.totalYapePlin.toFixed(2)}`);
-          $('#cierreDeudasNuevas').text(
-            `S/ ${resumen.totalDeudasNuevas.toFixed(2)}`
-          );
-          $('#cierreEgresos').text(`S/ ${resumen.totalGastos.toFixed(2)}`);
+          console.log("Resumen recibido:", resumen);
+          // --- LLENADO DEL MODAL DE CIERRE ---
+          
+          // 1. Resumen Informativo
+          $('#cierreTotalVentasApp').text(`S/ ${Number(resumen.totalVentasApp || 0).toFixed(2)}`);
+          $('#cierreQVentas').text(resumen.qVentas || 0);
+
+          // 2. Desglose de Movimientos 
+          // [CORREGIDO] Usamos los nombres que definimos en el Backend Caja.gs
+          $('#cierrePagosDeuda').text(`S/ ${Number(resumen.cobrosDeudaEfectivo || 0).toFixed(2)}`);
+          
+          // (-) Deducciones
+          // [CORREGIDO] Usamos 'ventasDigitales' en lugar de 'totalYapePlin'
+          $('#cierreYapePlin').text(`S/ ${Number(resumen.ventasDigitales || 0).toFixed(2)}`); 
+          $('#cierreDeudasNuevas').text(`S/ ${Number(resumen.totalDeudasNuevas || 0).toFixed(2)}`);
+          $('#cierreEgresos').text(`S/ ${Number(resumen.totalGastos || 0).toFixed(2)}`);
 
           $('#formCerrarCaja')[0].reset();
-          calcularCierreCajaDefinitivo();
+          
+          // Limpiamos y recalculamos
+          $('#cierreMontoCyberplanet').val(''); 
+          $('#cierreMontoReal').val('');
+          $('#cierreMontoEsperado').text('Esperando dato Cyberplanet...');
+          $('#cierreDiferencia').text('---');
+
           modalCerrarCaja.show();
         })
-        .withFailureHandler((err) =>
-          showError('Error al obtener resumen', err.message)
-        )
+        .withFailureHandler((err) => showError('Error al obtener resumen', err.message))
         .obtenerResumenParaCierre(appState.caja.SesionID);
     });
 
-    // Calcular el cierre en tiempo real al escribir en los inputs
-    $('#cierreMontoCyberplanet, #cierreMontoReal').on(
-      'input',
-      calcularCierreCajaDefinitivo
-    );
+    // Calcular el cierre en tiempo real
+    $('#cierreMontoCyberplanet, #cierreMontoReal').on('input', calcularCierreCajaDefinitivo);
 
+    // Lógica de cálculo en tiempo real (Frontend - BLINDADA)
     function calcularCierreCajaDefinitivo() {
       if (!resumenDeCierreCache) return;
+      
+      const montoApertura = parseFloat(appState.caja.MontoApertura || 0);
       const montoCyber = parseFloat($('#cierreMontoCyberplanet').val() || 0);
       const montoReal = parseFloat($('#cierreMontoReal').val() || 0);
 
-      // Aplicamos la fórmula del backend
-      const esperado =
-        montoCyber +
-        resumenDeCierreCache.totalPagosDeudaEfectivo -
-        resumenDeCierreCache.totalYapePlin -
-        resumenDeCierreCache.totalDeudasNuevas -
-        resumenDeCierreCache.totalGastos;
+      // Usamos "|| 0" para proteger contra valores undefined o null
+      const cobrosDeuda = resumenDeCierreCache.cobrosDeudaEfectivo || 0;
+      // Protección doble: busca el nombre nuevo O el viejo
+      const ventasDig = resumenDeCierreCache.ventasDigitales || resumenDeCierreCache.totalYapePlin || 0; 
+      const fiados = resumenDeCierreCache.totalDeudasNuevas || 0;
+      const gastos = resumenDeCierreCache.totalGastos || 0;
+
+      const ingresos = montoApertura + montoCyber + cobrosDeuda;
+      const egresos = ventasDig + fiados + gastos;
+      
+      const esperado = ingresos - egresos;
+
       $('#cierreMontoEsperado').text(`S/ ${esperado.toFixed(2)}`);
 
       const diferencia = montoReal - esperado;
       const elDiferencia = $('#cierreDiferencia');
-      elDiferencia.text(`S/ ${diferencia.toFixed(2)}`);
-      elDiferencia
-        .removeClass('text-success text-danger text-warning')
-        .addClass(
-          diferencia === 0
-            ? 'text-success'
-            : diferencia > 0
-              ? 'text-warning'
-              : 'text-danger'
-        );
+      
+      let signo = diferencia > 0 ? '+' : '';
+      // Evitamos mostrar "NaN" si el cálculo falla por alguna razón extrema
+      const diffTexto = isNaN(diferencia) ? "Error" : `S/ ${signo}${diferencia.toFixed(2)}`;
+      elDiferencia.text(diffTexto);
+      
+      elDiferencia.removeClass('text-success text-danger text-warning');
+      if (Math.abs(diferencia) < 0.10) elDiferencia.addClass('text-success');
+      else if (diferencia > 0) elDiferencia.addClass('text-warning');
+      else elDiferencia.addClass('text-danger');
     }
 
     // Evento para el formulario de cierre final
@@ -2497,11 +2815,7 @@
       };
 
       const btn = $(this).find('button[type="submit"]');
-      btn
-        .prop('disabled', true)
-        .html(
-          '<span class="spinner-border spinner-border-sm"></span> Cerrando...'
-        );
+      btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Cerrando...');
 
       google.script.run
         .withSuccessHandler((resumenFinal) => {
@@ -2514,7 +2828,7 @@
         })
         .withFailureHandler((err) => {
           showError('Error al Cerrar Caja', err.message);
-          btn.prop('disabled', false).text('Guardar y Cerrar Turno'); // <-- CORRECCIÓN
+          btn.prop('disabled', false).text('Guardar y Cerrar Turno');
         })
         .finalizarCierreCaja(datosCierre);
     });
@@ -2644,5 +2958,781 @@
         })
         .obtenerResumenProductosVendidosPorSesion(sesionID);
     });
+    //----------------------------------------------------
+    // 14. MÓDULO DE GESTIÓN DE DEUDAS (VERSIÓN MEJORADA)
+    // Incluye: Corrección de bug de refresco, colores de
+    // vencimiento y alertas de deudas que vencen hoy.
+    //----------------------------------------------------
+
+    // --- VARIABLE DE CACHÉ ---
+    let datosDeudasCache = null;
+
+    // --- FUNCIÓN CENTRAL DE CARGA DE DATOS ---
+    /**
+     * [NUEVA FUNCIÓN]
+     * Carga todos los datos de deudas desde el backend.
+     * Maneja el caché y las alertas de vencimiento.
+     * @param {boolean} forzarRefresco - Si es true, ignora el caché y pide datos nuevos.
+     */
+    function cargarDatosDeudas(forzarRefresco = false) {
+        // 1. Decidir la pestaña activa (o la primera por defecto)
+        let tabId = $('#panelGestionDeudas .nav-tabs .nav-link.active').attr('id');
+        if (!tabId) {
+            tabId = 'tabDeudasPendientes'; // Default a la pestaña 1
+            $('#' + tabId).addClass('active');
+        }
+
+        // 2. Usar el caché si existe y no se está forzando
+        if (datosDeudasCache && !forzarRefresco) {
+            renderizarVista(tabId); // Simplemente renderizar
+            return;
+        }
+
+        // 3. Si no hay caché o se fuerza, buscar en el backend
+        const contenido = $('#contenidoPanelDeudas').html('<div class="text-center p-5"><div class="spinner-border"></div><p class="mt-2">Cargando datos del módulo de deudas...</p></div>');
+        
+        google.script.run
+            .withSuccessHandler(datosCompletos => {
+              console.log("DATOS COMPLETOS RECIBIDOS:", datosCompletos);
+                datosDeudasCache = datosCompletos; // Guardar en caché
+                
+                // --- ¡FEATURE 2: ALERTA DE VENCIMIENTOS! ---
+                if (datosCompletos.pendientes && datosCompletos.pendientes.length > 0) {
+                    const hoySinHora = new Date(new Date().setHours(0, 0, 0, 0));
+                    let deudasVencenHoy = 0;
+                    
+                    datosCompletos.pendientes.forEach(deuda => {
+                        if (deuda.FechaVencimiento) {
+                            const fechaVenc = new Date(deuda.FechaVencimiento + 'T00:00:00'); // Comparar como fecha local
+                            if (fechaVenc.getTime() === hoySinHora.getTime()) {
+                                deudasVencenHoy++;
+                            }
+                        }
+                    });
+
+                    if (deudasVencenHoy > 0) {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'warning',
+                            title: `¡Atención! Tienes ${deudasVencenHoy} deuda(s) que vencen hoy.`,
+                            showConfirmButton: false,
+                            timer: 4000
+                        });
+                    }
+                }
+                // --- FIN FEATURE 2 ---
+
+                renderizarVista(tabId); // Renderizar la vista solicitada
+            })
+            .withFailureHandler(err => {
+                showError('Error al cargar deudas', err.message);
+                contenido.html(`<div class="alert alert-danger">${err.message}</div>`);
+            })
+            .obtenerDatosCompletosDeudas();
+    }
+
+    /**
+     * [NUEVA FUNCIÓN]
+     * Renderiza el contenido de la pestaña según el ID.
+     * Se llama después de que los datos se cargan.
+     */
+    function renderizarVista(tabId) {
+        if (!datosDeudasCache) return; // Seguridad
+
+        switch(tabId) {
+            case 'tabDeudasPendientes':
+                renderizarTablaDeudas(datosDeudasCache.pendientes);
+                break;
+            case 'tabHistorialDeudas':
+                renderizarTablaHistorial(datosDeudasCache.historialDeudas, 'Deudas Creadas');
+                break;
+            case 'tabHistorialPagosDeuda':
+                renderizarTablaHistorial(datosDeudasCache.historialPagos, 'Pagos de Deuda');
+                break;
+        }
+    }
+
+
+    // --- FUNCIONES DE RENDERIZADO DE TABLAS ---
+
+    /**
+     * [MODIFICADA]
+     * Dibuja la tabla de deudas pendientes (Consolidadas).
+     * Ahora incluye lógica de colores para vencimientos.
+     */
+    function renderizarTablaDeudas(deudas) {
+        const contenido = $('#contenidoPanelDeudas').empty();
+        const tablaHtml = `
+            <div class="input-group mb-3" style="max-width: 400px;">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="text" id="filtroDeudas" class="form-control" placeholder="Buscar por Cliente o DNI...">
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover" id="tablaDeudasPendientes">
+                <thead class="table-dark">
+                  <tr><th>Cliente</th><th>Monto Original</th><th>Saldo Pendiente</th><th>Fecha Creación</th><th>Vencimiento</th><th>Notas</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="deudasBody"></tbody>
+              </table>
+            </div>
+        `;
+        contenido.html(tablaHtml);
+
+        const tbody = $('#deudasBody');
+        if (!deudas || deudas.length === 0) {
+            tbody.html('<tr><td colspan="7" class="text-center text-muted">¡Felicidades! No hay deudas pendientes.</td></tr>');
+            return;
+        }
+
+        const hoySinHora = new Date(new Date().setHours(0, 0, 0, 0));
+
+        deudas.forEach(deuda => {
+            const saldoPendiente = Number(deuda.SaldoPendiente) || 0;
+            let botonAccion = `<button class="btn btn-sm btn-success pagar-deuda" data-deuda-id="${deuda.DeudaID}" data-cliente-id="${deuda.ClienteID}" data-cliente-nombre="${deuda.ClienteNombre}" data-saldo="${saldoPendiente}"><i class="bi bi-cash-coin"></i> Registrar Pago</button>`;
+            
+            // --- ¡FEATURE 1: LÓGICA DE COLORES! ---
+            let claseFila = '';
+            let textoVencimiento = deuda.FechaVencimiento || 'N/A';
+            
+            if (deuda.FechaVencimiento) {
+                const fechaVenc = new Date(deuda.FechaVencimiento + 'T00:00:00'); // Comparar como fecha local
+                const diffTime = fechaVenc - hoySinHora;
+                const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDias < 0) {
+                    claseFila = 'table-danger'; // Vencida (Rojo)
+                    textoVencimiento += ` (Vencida hace ${Math.abs(diffDias)} días)`;
+                } else if (diffDias <= 3) {
+                    claseFila = 'table-warning'; // Por vencer (Amarillo)
+                    textoVencimiento += ` (Vence en ${diffDias} días)`;
+                }
+            }
+            // --- FIN FEATURE 1 ---
+            
+            const fila = `
+                <tr class="${claseFila}">
+                    <td>${deuda.ClienteNombre || ''} (${deuda.ClienteID || ''})</td>
+                    <td>S/ ${(Number(deuda.MontoOriginal) || 0).toFixed(2)}</td>
+                    <td class="fw-bold">S/ ${saldoPendiente.toFixed(2)}</td>
+                    <td>${deuda.FechaCreacion || ''}</td>
+                    <td>${textoVencimiento}</td>
+                    <td>${deuda.Notas || ''}</td>
+                    <td>${botonAccion}</td>
+                </tr>`;
+            tbody.append(fila);
+        });
+    }
+
+    /**
+     * [SIN CAMBIOS]
+     * Dibuja una tabla de historial genérica.
+     */
+    function renderizarTablaHistorial(historial, tipo) {
+        // ... (Esta función se mantiene igual que en la versión anterior)
+        const contenido = $('#contenidoPanelDeudas').empty();
+        if (!historial || historial.length === 0) {
+            contenido.html(`<p class="text-center text-muted">No hay registros en el historial de ${tipo.toLowerCase()}.</p>`);
+            return;
+        }
+        const headers = Object.keys(historial[0]);
+        const tablaId = "tablaHistorialGenerica";
+        const searchInput = `
+          <div class="input-group mb-3" style="max-width: 400px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control filtro-historial" placeholder="Buscar en historial..." data-table-id="${tablaId}">
+          </div>
+        `;
+        const tablaHtml = `
+          <div class="table-responsive">
+            <table class="table table-sm table-striped table-bordered" id="${tablaId}">
+              <thead class="table-dark">
+                <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+              </thead>
+              <tbody>
+                ${historial.map(row => `<tr>${headers.map(h => `<td>${row[h]}</td>`).join('')}</tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+        contenido.html(searchInput + tablaHtml);
+    }
+
+
+    // --- MANEJADORES DE EVENTOS ---
+
+    /**
+     * [MODIFICADO]
+     * Clic en el Sidebar ("Deudas").
+     * Ahora solo se asegura de que el caché se borre si el panel
+     * está oculto, y llama a la función de carga.
+     */
+    $('#btnVerDeudas').on('click', function() {
+        // Si el panel de deudas NO está visible, limpiamos el caché
+        // para asegurar que se carguen datos frescos.
+        if (!$('#panelDeudas').is(':visible')) {
+            datosDeudasCache = null;
+        }
+        
+        // Dejamos que el script genérico muestre el panel...
+        // y llamamos a nuestra función de carga.
+        cargarDatosDeudas(false);
+    });
+
+    /**
+     * [ELIMINADO]
+     * El botón 'btnClosePanelDeudas' se eliminó del HTML,
+     * por lo que ya no necesitamos su evento.
+     */
+    // $('#btnClosePanelDeudas').on('click', ...) // ELIMINADO
+
+
+    /**
+     * [SIN CAMBIOS]
+     * Evento para el botón 'Añadir Nueva Deuda'.
+     * (Utiliza la versión de 'cargarClientesEnSelects' que ya corregimos)
+     */
+    $('#btnAnadirDeuda').on('click', function () {
+        if (!appState.caja || appState.caja.Estado !== 'Abierta') {
+            showError('Caja Cerrada', 'Debes tener una sesión de caja abierta.');
+            return;
+        }
+        const form = $('#formNuevaDeuda');
+        form[0].reset();
+        const selectId = '#deudaSelectCliente'; 
+        const select = $(selectId);
+        if (select.length === 0) {
+          showError('Error de UI', 'No se encontró el <select> con id "deudaSelectCliente" en el modal.');
+          return;
+        }
+        cargarClientesEnSelects(selectId); 
+        setTimeout(() => {
+            $(selectId + " option[value='varios']").remove();
+            $(selectId).prepend('<option value="" selected disabled>Seleccione un cliente...</option>');
+            $(selectId).val("");
+        }, 300);
+        modalNuevaDeuda.show();
+    });
+
+/**
+     * [CORREGIDO Y BLINDADO]
+     * Evento de envío para el formulario de nueva deuda.
+     * Se usa .off('submit') para evitar el error 429 (Duplicidad de llamadas).
+     */
+    $('#formNuevaDeuda').off('submit').on('submit', function (e) {
+        e.preventDefault(); 
+        
+        const form = $(this);
+        const btnSubmit = form.find('button[type="submit"]');
+        
+        // Guardamos el texto actual del botón para restaurarlo después
+        const textoBotonOriginal = btnSubmit.text(); 
+
+        const clienteSeleccionado = $('#deudaSelectCliente option:selected');
+        const monto = parseFloat($('#deudaMonto').val());
+        
+        // 1. Validaciones
+        if (!clienteSeleccionado.val() || clienteSeleccionado.val() === "varios") {
+            showError('Datos incompletos', 'Debe seleccionar un cliente específico.'); 
+            return;
+        }
+        if (!monto || monto <= 0) {
+            showError('Datos incompletos', 'El monto debe ser un número positivo.'); 
+            return;
+        }
+
+        // 2. Preparación de datos (Tu lógica de extracción de nombre)
+        const dniCliente = clienteSeleccionado.val();
+        const textoCompleto = clienteSeleccionado.text();
+        let nombreParseado = textoCompleto.replace(/\(.*\)/, '').trim();
+        const partes = nombreParseado.split(' - ');
+        
+        if (partes.length > 1) { 
+            nombreParseado = partes[1].trim(); 
+        } else { 
+            nombreParseado = partes[0].trim(); 
+        }
+        const nombreCliente = nombreParseado;
+
+        const datosDeuda = {
+            cliente: { dni: dniCliente, nombre: nombreCliente },
+            monto: monto,
+            fechaVencimiento: $('#deudaFechaVencimiento').val() || '',
+            notas: $('#deudaNotas').val() || '',
+            sesionID: appState.caja.SesionID,
+            usuarioEmail: appState.user.email
+        };
+
+        // 3. Bloqueo de botón
+        btnSubmit.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Guardando...');
+        
+        // 4. Envío al Backend
+        google.script.run
+            .withSuccessHandler(res => {
+                // 'res' es ahora un objeto simple {deudaID, monto}
+                showToast('success', `Deuda ${res.deudaID} creada por S/ ${res.monto.toFixed(2)}.`);
+                
+                // --- INICIO DE LA CORRECCIÓN ---
+                // 1. Forzamos el refresco llamando al botón
+                $('#btnRefrescarDeudas').click();
+                // --- FIN DE LA CORRECCIÓN ---
+
+                modalNuevaDeuda.hide();
+                form[0].reset();
+                
+                // Restauramos botón
+                btnSubmit.prop('disabled', false).text(textoBotonOriginal); 
+            })
+            .withFailureHandler(err => {
+                showError('Error al crear deuda', err.message);
+                // Restauramos botón
+                btnSubmit.prop('disabled', false).text(textoBotonOriginal);
+            })
+            .crearNuevaDeuda(datosDeuda);
+    });
+
+
+    /**
+     * [MODIFICADO]
+     * Lógica para cambiar entre las Pestañas (Tabs).
+     * Ahora solo activa la pestaña y llama a la función de carga.
+     */
+    $('#panelGestionDeudas .nav-tabs .nav-link').on('click', function(e) {
+        e.preventDefault();
+        if ($(this).hasClass('active') && datosDeudasCache) {
+            return; // No hacer nada si ya está activa y hay caché
+        }
+        
+        $('#panelGestionDeudas .nav-tabs .nav-link').removeClass('active');
+        $(this).addClass('active');
+        
+        // Llama a la función central (usará el caché)
+        cargarDatosDeudas(false); 
+    });
+
+    /**
+     * [MODIFICADO]
+     * Evento para el botón de refrescar datos.
+     * Ahora solo llama a la función de carga forzando el refresco.
+     */
+    $('#btnRefrescarDeudas').on('click', function() {
+        showToast('info', 'Actualizando datos...');
+        cargarDatosDeudas(true); // ¡Forzar refresco!
+    });
+
+    /**
+     * [SIN CAMBIOS]
+     * Evento para el botón "Registrar Pago".
+     * (Se mantiene la lógica de SweetAlert)
+     */
+    $(document).on('click', '.pagar-deuda', function() {
+        if (!appState.caja || appState.caja.Estado !== 'Abierta') {
+            showError('Caja Cerrada', 'Debes tener una sesión de caja abierta.'); return;
+        }
+        const btnData = $(this).data();
+        const saldoFormateado = Number(btnData.saldo).toFixed(2);
+        Swal.fire({
+            title: `Pagar Deuda de ${btnData.clienteNombre}`,
+            html: `
+                <p>Saldo pendiente: <strong>S/ ${saldoFormateado}</strong></p>
+                <input type="number" id="swal-monto" class="swal2-input" placeholder="Monto a pagar" value="${saldoFormateado}" step="0.01" min="0.01" max="${saldoFormateado}">
+                <select id="swal-metodo" class="swal2-select">
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Yape/Plin">Yape/Plin</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                </select>
+                <textarea id="swal-notas" class="swal2-textarea" placeholder="Notas del pago (opcional)"></textarea>
+            `,
+            confirmButtonText: 'Registrar Pago',
+            showCancelButton: true,
+            focusConfirm: false,
+            preConfirm: () => {
+                const monto = parseFloat(document.getElementById('swal-monto').value);
+                if (!monto || monto <= 0 || monto > Number(btnData.saldo) + 0.01) {
+                    Swal.showValidationMessage(`El monto debe ser válido y no mayor al saldo de S/ ${saldoFormateado}`);
+                    return false;
+                }
+                return {
+                    monto: monto,
+                    metodoPago: document.getElementById('swal-metodo').value,
+                    notas: document.getElementById('swal-notas').value
+                };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const datosPago = {
+                    deudaID: btnData.deudaId, 
+                    clienteID: btnData.clienteId,
+                    monto: result.value.monto,
+                    metodoPago: result.value.metodoPago,
+                    notas: result.value.notas,
+                    sesionID: appState.caja.SesionID,
+                    usuarioEmail: appState.user.email
+                };
+                showToast('info', 'Registrando pago...');
+                google.script.run
+                    .withSuccessHandler(res => {
+                        // 'res' es ahora un objeto simple {message}
+                        showToast('success', res.message);
+
+                        // --- INICIO DE LA CORRECCIÓN ---
+                        // 1. Forzamos el refresco llamando al botón
+                        $('#btnRefrescarDeudas').click();
+                        // --- FIN DE LA CORRECCIÓN ---
+                    })
+                    .withFailureHandler(err => showError('Error al registrar pago', err.message))
+                    .registrarPagoDeDeuda(datosPago);
+            }
+        });
+    });
+
+    /** ============================================================
+     *  15. MÓDULO PAGOS YAPE – FRONTEND JS (conexión con PagosYape.gs)
+     * ============================================================ */
+    // ===============================
+    //  Inicialización del módulo
+    // ===============================
+    function initPagosYape() {
+
+        console.log("Inicializando Pagos Yape...");
+        
+        // Usamos el ID directo que tienes en tu HTML
+        const selectElement = $("#pmCliente");
+
+        if (selectElement.length === 0) {
+            console.error("ERROR CRÍTICO: No se encontró el elemento #pmCliente en el DOM.");
+            return;
+        }
+
+        // 1. Cargar clientes usando tu función GLOBAL
+        // Asegúrate de que 'cargarClientesEnSelects' esté definida globalmente
+        if (typeof cargarClientesEnSelects === "function") {
+             // Le pasamos el ID con el #
+            cargarClientesEnSelects("#pmCliente"); 
+        } else {
+            console.error("La función global cargarClientesEnSelects no está definida.");
+        }
+
+        // 2. Cargar tabla de pagos
+        cargarTablaPagos();
+
+        // 3. Configurar Eventos (Evitando duplicados)
+        $("#btnRefrescarPagos").off().on("click", function () {
+            cargarTablaPagos();
+        });
+
+        $("#formPagoManual").off().on("submit", function (e) {
+            e.preventDefault();
+            registrarPagoManual();
+        });
+
+        console.log("PagosYape inicializado correctamente.");
+    }
+    // ============================================================
+    //  Cargar la tabla principal de pagos (Manual + Automático)
+    // ============================================================
+    function cargarTablaPagos() {
+      console.log("🚀 [FRONTEND] Iniciando carga de tabla de pagos...");
+      
+      // Mostrar indicador de carga visual
+      $("#tablaHistorialPagos tbody").html('<tr><td colspan="10" class="text-center p-3"><div class="spinner-border text-primary"></div> Cargando...</td></tr>');
+
+      google.script.run
+        .withSuccessHandler((data) => {
+          console.log("✅ [FRONTEND] Datos recibidos del backend:", data);
+          pintarTablaPagos(data);
+        })
+        .withFailureHandler((err) => {
+          console.error("❌ [FRONTEND] Error al traer pagos:", err);
+          $("#tablaHistorialPagos tbody").html(`<tr><td colspan="10" class="text-center text-danger">Error: ${err.message}</td></tr>`);
+        })
+        .obtenerPagosYape();
+    }
+
+    // ============================================================
+    //  Pintar Tabla Pagos (NUEVAS COLUMNAS)
+    // ============================================================
+    function pintarTablaPagos(data) {
+      const tbody = $("#tablaHistorialPagos tbody");
+      const thead = $("#tablaHistorialPagos thead");
+      
+      // Actualizar encabezados dinámicamente si es necesario, o asegúrate que tu HTML tenga:
+      // <th>Fecha</th><th>Cliente</th><th>Monto</th><th>Código</th><th>Ref.</th><th>Método</th><th>Tipo</th><th>Nota</th><th>Registrado Por</th><th>Acciones</th>
+      
+      tbody.empty();
+
+      if (!data || data.length === 0) {
+         tbody.html('<tr><td colspan="10" class="text-center text-muted p-3">No hay pagos registrados.</td></tr>');
+         return;
+      }
+
+      data.forEach((item) => {
+        const color = obtenerColorMetodo(item.metodo);
+        const esManual = item.tipo === "MANUAL";
+
+        const acciones = esManual
+          ? `<button class="btn btn-outline-danger btn-sm btn-eliminar-pago" data-id="${item.id}" title="Eliminar"><i class="bi bi-trash"></i></button>`
+          : `<span class="text-muted"><i class="bi bi-robot" title="Automático"></i></span>`;
+
+        tbody.append(`
+          <tr>
+            <td style="white-space:nowrap;">${item.fecha}</td>
+            <td><small class="fw-bold">${item.cliente}</small></td>
+            <td class="text-success fw-bold">S/ ${Number(item.monto).toFixed(2)}</td>
+            <td><span class="badge bg-light text-dark border">${item.codigo}</span></td>
+            <td><small>${item.referencia}</small></td>
+            <td><span class="badge" style="background:${color}">${item.metodo}</span></td>
+            <td>
+              ${item.tipo === "AUTOMATICO" 
+                ? '<span class="badge bg-indigo">Auto</span>' 
+                : '<span class="badge bg-secondary">Manual</span>'}
+            </td>
+            <td><small class="text-muted fst-italic">${item.nota}</small></td>
+            <td><small>${item.usuario || '-'}</small></td>
+            <td>${acciones}</td>
+          </tr>
+        `);
+      });
+    }
+
+    // =====================================================================
+    //  LISTENER PARA ELIMINAR PAGO (Solución al error de scope)
+    // =====================================================================
+    $(document).on('click', '.btn-eliminar-pago', function() {
+        // 1. Obtenemos el ID del atributo data-id
+        const id = $(this).data('id');
+        
+        // 2. Llamamos a tu función interna
+        eliminarPagoManual(id);
+    });
+
+    // =====================================================================
+    //  Registrar Pago Manual (CON DATOS DE SESIÓN)
+    // =====================================================================
+    function registrarPagoManual() {
+      if (!appState.caja || appState.caja.Estado !== 'Abierta') {
+         Swal.fire("Caja Cerrada", "Debes tener turno abierto para registrar ingresos.", "warning");
+         return;
+      }
+
+      // Capturar el nombre del cliente desde el texto del select
+      let clienteNombre = "Cliente Varios";
+      const clienteSelect = $("#pmCliente option:selected");
+      if (clienteSelect.val()) {
+          clienteNombre = clienteSelect.text(); // Ej: "Machelo - Roger..."
+      }
+
+      const data = {
+        fecha: $("#pmFecha").val() || new Date().toISOString().split("T")[0],
+        monto: parseFloat($("#pmMonto").val()),
+        cliente: clienteNombre,
+        metodo: $("#pmMetodo").val(),
+        codigo: $("#pmCodigo").val() || "-",
+        referencia: $("#pmReferencia").val() || "-",
+        nota: $("#pmNota").val() || "",
+        // Datos de sesión
+        sesionID: appState.caja.SesionID,
+        usuarioEmail: appState.user.email
+      };
+
+      if (!data.monto || data.monto <= 0) {
+        Swal.fire("Error", "El monto debe ser mayor a 0", "error");
+        return;
+      }
+
+      const btn = $("#formPagoManual button[type='submit']");
+      btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Guardando...');
+
+      google.script.run
+        .withSuccessHandler(() => {
+          Swal.fire({
+              icon: 'success',
+              title: 'Registrado',
+              text: 'Pago guardado exitosamente.',
+              timer: 2000,
+              showConfirmButton: false
+          });
+          
+          // Limpiar formulario pero mantener fecha actual
+          $("#formPagoManual")[0].reset();
+          $("#pmFecha").val(new Date().toISOString().split("T")[0]);
+          
+          cargarTablaPagos();
+          btn.prop('disabled', false).html('<i class="bi bi-save me-2"></i>Registrar Pago');
+        })
+        .withFailureHandler(err => {
+            Swal.fire("Error", err.message, "error");
+            btn.prop('disabled', false).html('<i class="bi bi-save me-2"></i>Registrar Pago');
+        })
+        .registrarPagoManual(data);
+    }
+
+    // =====================================================================
+    //  Eliminar Pago Manual
+    // =====================================================================
+    function eliminarPagoManual(id) {
+      Swal.fire({
+        title: "¿Eliminar pago?",
+        text: "Esta acción no se puede deshacer.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Eliminar",
+      }).then((res) => {
+        if (res.isConfirmed) {
+          google.script.run
+            .withSuccessHandler(() => {
+              Swal.fire("Eliminado", "Pago eliminado correctamente", "success");
+              cargarTablaPagos();
+            })
+            .eliminarPagoManual(id);
+        }
+      });
+    }
+
+    // =====================================================================
+    //  Editar Pago Manual
+    // =====================================================================
+    function editarPagoManual(id) {
+      Swal.fire({
+        title: "Editar monto",
+        input: "number",
+        inputAttributes: { step: "0.10" },
+        showCancelButton: true,
+        confirmButtonText: "Guardar",
+      }).then((res) => {
+        if (res.isConfirmed) {
+          const nuevoMonto = res.value;
+
+          if (nuevoMonto <= 0) {
+            Swal.fire("Error", "El monto no es válido", "error");
+            return;
+          }
+
+          const data = {
+            fecha: new Date().toISOString().split("T")[0],
+            monto: nuevoMonto,
+            metodo: "YAPE",
+            codigo: "-",
+          };
+
+          google.script.run
+            .withSuccessHandler(() => {
+              Swal.fire("Actualizado", "Pago actualizado", "success");
+              cargarTablaPagos();
+            })
+            .editarPagoManual(id, data);
+        }
+      });
+    }
+
+    // =====================================================================
+    //  Colores por tipo de pago (bancos)
+    // =====================================================================
+    function obtenerColorMetodo(m) {
+      switch (m) {
+        case "YAPE": return "#7b2cbf";
+        case "PLIN": return "#00bcd4";
+        case "INTERBANK": return "#00a859";
+        case "BBVA": return "#0039a6";
+        case "BCP": return "#ff6600";
+        case "SCOTIABANK": return "#c8102e";
+        case "EFECTIVO": return "#198754";
+        default: return "#6c757d";
+      }
+    }
+
+    // =====================================================================
+    //  16. MÓDULO DE GESTIÓN DE EGRESOS (FRONTEND)
+    // =====================================================================
+
+    /**
+     * Carga la tabla de egresos de la sesión actual.
+     * Se llama desde el Switch de navegación.
+     */
+    function cargarHistorialEgresos() {
+        if (!appState.caja || appState.caja.Estado !== 'Abierta') {
+            $("#tablaEgresosBody").html('<tr><td colspan="5" class="text-center text-muted">No hay sesión de caja activa.</td></tr>');
+            return;
+        }
+
+        console.log("Cargando historial de egresos...");
+        $("#tablaEgresosBody").html('<tr><td colspan="5" class="text-center"><div class="spinner-border text-primary spinner-border-sm"></div> Cargando...</td></tr>');
+
+        google.script.run
+            .withSuccessHandler(renderizarTablaEgresos)
+            .withFailureHandler(err => {
+                console.error(err);
+                showError("Error al cargar gastos", err.message);
+            })
+            .obtenerEgresosSesionActual(appState.caja.SesionID);
+    }
+
+    /**
+     * Pinta la tabla de egresos en el HTML.
+     */
+    function renderizarTablaEgresos(egresos) {
+        const tbody = $("#tablaEgresosBody"); // Asegúrate que tu tabla en HTML tenga este ID en el tbody
+        tbody.empty();
+
+        if (!egresos || egresos.length === 0) {
+            tbody.html('<tr><td colspan="5" class="text-center text-muted fst-italic">No hay gastos registrados en este turno.</td></tr>');
+            return;
+        }
+
+        egresos.forEach(egreso => {
+            // Estilo según tipo
+            let badgeClass = 'bg-secondary';
+            if (egreso.tipo === 'GASTO_GENERAL') badgeClass = 'bg-warning text-dark';
+            if (egreso.tipo === 'COMPRA_MERCADERIA') badgeClass = 'bg-info text-dark';
+            if (egreso.tipo === 'RETIRO_EFECTIVO') badgeClass = 'bg-danger';
+
+            const fila = `
+                <tr>
+                    <td>${egreso.fecha}</td>
+                    <td><span class="badge ${badgeClass}">${egreso.tipo}</span></td>
+                    <td>${egreso.descripcion}</td>
+                    <td class="fw-bold text-danger">- S/ ${Number(egreso.monto).toFixed(2)}</td>
+                    <td><small class="text-muted">${egreso.id}</small></td>
+                </tr>
+            `;
+            tbody.append(fila);
+        });
+    }
+
+    // --- Evento para el Botón "Guardar Gasto" (en el Modal) ---
+    // Asegúrate de que este evento se declare una sola vez (ej. en $(document).ready)
+    $('#formRegistrarEgreso').on('submit', function(e) {
+        e.preventDefault();
+        
+        if (!appState.caja || appState.caja.Estado !== 'Abierta') {
+            showError('Caja Cerrada', 'Debes tener turno abierto.');
+            return;
+        }
+
+        const datosEgreso = {
+            tipo: $('#egresoTipo').val(), // Asegúrate de usar el <select> que te recomendé antes
+            monto: parseFloat($('#egresoMonto').val()),
+            descripcion: $('#egresoDescripcion').val(),
+            sesionID: appState.caja.SesionID,
+            usuarioEmail: appState.user.email
+        };
+
+        const btn = $(this).find('button[type="submit"]');
+        btn.prop('disabled', true).text('Guardando...');
+
+        google.script.run
+            .withSuccessHandler(res => {
+                showToast('success', res.message);
+                modalRegistrarEgreso.hide();
+                $('#formRegistrarEgreso')[0].reset();
+                cargarHistorialEgresos(); // Recargar la tabla automáticamente
+                btn.prop('disabled', false).text('Guardar Egreso');
+            })
+            .withFailureHandler(err => {
+                showError('Error', err.message);
+                btn.prop('disabled', false).text('Guardar Egreso');
+            })
+            .registrarNuevoEgreso(datosEgreso);
+    });
+
   });
 </script>
