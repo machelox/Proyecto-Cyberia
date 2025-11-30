@@ -74,14 +74,22 @@ function iniciarSesion(email, password) {
 
   const permisos = {};
   pData
-    .filter(permiso => permiso[pIdx.rol] === rolUsuario)
+    .filter(permiso => String(permiso[pIdx.rol] || '').trim() === rolUsuario)
     .forEach(permiso => {
-      const modulo = permiso[pIdx.modulo];
-      const accion = permiso[pIdx.accion];
+      const modulo = String(permiso[pIdx.modulo] || '').trim();
+      const accion = String(permiso[pIdx.accion] || '').trim();
       const permitido = permiso[pIdx.permitido].toString().toUpperCase() === 'TRUE';
-      if (!permisos[modulo]) permisos[modulo] = {};
-      permisos[modulo][accion] = permitido;
+      if (modulo && accion) {
+        if (!permisos[modulo]) permisos[modulo] = {};
+        permisos[modulo][accion] = permitido;
+      }
     });
+
+  try {
+      Logger.log(`[Auth.gs] Permisos construidos para ${rolUsuario}: ${JSON.stringify(permisos, null, 2)}`);
+    } catch (e) {
+      Logger.log(`[Auth.gs] Error al stringify permisos: ${e.message}`);
+    }
 
   if (Object.keys(permisos).length === 0) {
     registrarLog('LOGIN_FALLIDO', `Rol ${rolUsuario} sin permisos definidos`, email);
