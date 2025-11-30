@@ -423,4 +423,3 @@ function generarReporteVentas(fechaInicio, fechaFin, formato = 'csv', emailAdmin
     throw error;
   }
 }
-
